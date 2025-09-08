@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear cuenta</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="formulario">
+        <h1>Crear Cuenta</h1>
+        <form action="/signup" method="post" id="signupForm">
+            <div class="group">
+                <input type="text" name="name" required placeholder=" ">
+                <label>Nombre completo</label>
+            </div>
+            <div class="group">
+                <input type="text" name="apellido_paterno" required placeholder=" ">
+                <label>Apellido paterno</label>
+            </div>
+            <div class="group">
+                <input type="text" name="apellido_materno" required placeholder=" ">
+                <label>Apellido materno</label>
+            </div>
+            <div class="group">
+                <input type="email" name="email" required placeholder=" ">
+                <label>Correo electrónico</label>
+            </div>
+            <div class="group">
+                <input type="tel" name="telefono" required placeholder=" ">
+                <label>Teléfono</label>
+            </div>
+            <div class="group">
+                <input type="password" name="password" required placeholder=" ">
+                <label>Contraseña</label>
+            </div>
+            <div class="group">
+                <input type="password" name="confirm_password" required placeholder=" ">
+                <label>Confirmar contraseña</label>
+            </div>
+            <input type="submit" value="Registrarse">
+        </form>
+
+        <div class="login-link">
+            ¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a>
+        </div>
+    </div>
+
+    <script>
+        // Validación de contraseñas en el cliente
+        document.getElementById('signupForm').addEventListener('submit', function (e) {
+            const password = this.password.value;
+            const confirm = this.confirm_password.value;
+            if (password !== confirm) {
+                e.preventDefault();
+                alert('Las contraseñas no coinciden. Por favor, verifica.');
+            }
+        });
+    </script>
+</body>
+</html>
