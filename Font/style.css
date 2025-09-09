@@ -170,8 +170,8 @@ input [type="submit"]:hover{
 }
 
 .group {
-    position: relative;
-    margin-bottom: 20px;
+  position: relative;
+  margin: 20px 0;
 }
 
 .group input {
@@ -191,38 +191,47 @@ input [type="submit"]:hover{
 }
 
 .group label {
-    position: absolute;
-    left: 0;
-    top: 12px;
-    font-size: 16px;
-    color: #777;
-    pointer-events: none;
-    transition: 0.3s ease;
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  background: white;
+  padding: 0 5px;
+  font-size: 14px;
+  color: #054770;
+  pointer-events: none;
+  transition: 0.2s ease all;
 }
+
+
 .group select {
   width: 100%;
-  padding: 10px;
+  padding: 10px 10px 10px 10px;
   font-size: 16px;
   border: 2px solid #ccc;
   border-radius: 5px;
   background-color: white;
   color: #333;
-  appearance: none; /* Oculta el ícono nativo */
+  appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
 }
 
+
+
+.group select:focus + label,
+.group select:not([value=""]) + label {
+  top: -10px;
+  font-size: 14px;
+  color: #054770;
+}
+
+
+
 .group select:focus {
-  border-color: #6c63ff;
+  border-color: #ff7700;
   outline: none;
 }
 
-.group input:focus ~ label,
-.group input:not(:placeholder-shown) ~ label {
-    top: -10px;
-    font-size: 14px;
-    color:#054770;
-}
 
 /* Enlace */
 .login-link {
