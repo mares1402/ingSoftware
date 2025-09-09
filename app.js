@@ -6,7 +6,7 @@ const { registrarUsuario, verificarDuplicados } = require('./Back/singup');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname + '/Front'));
+app.use(express.static(__dirname + '/Font'));
 app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
