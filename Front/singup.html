@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -7,13 +8,14 @@
     <title>Crear cuenta</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="formulario">
         <h1>Crear Cuenta</h1>
         <form action="/signup" method="post" id="signupForm">
             <div class="group">
                 <input type="text" name="name" required placeholder=" ">
-                <label>Nombre completo</label>
+                <label>Nombre/label>
             </div>
             <div class="group">
                 <input type="text" name="apellido_paterno" required placeholder=" ">
@@ -22,6 +24,16 @@
             <div class="group">
                 <input type="text" name="apellido_materno" required placeholder=" ">
                 <label>Apellido materno</label>
+            </div>
+            <div class="group">
+                <label for="Genero">Género</label>
+                <select name="Genero" id="Genero" required>
+                    <option value="" disabled selected>Selecciona una opción</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+                    <option value="NoBinario">No binario</option>
+                    <option value="Otro">Otro</option>
+                </select>
             </div>
             <div class="group">
                 <input type="email" name="email" required placeholder=" ">
@@ -59,4 +71,5 @@
         });
     </script>
 </body>
+
 </html>

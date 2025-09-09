@@ -199,6 +199,23 @@ input [type="submit"]:hover{
     pointer-events: none;
     transition: 0.3s ease;
 }
+.group select {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 2px solid #ccc;
+  border-radius: 5px;
+  background-color: white;
+  color: #333;
+  appearance: none; /* Oculta el ícono nativo */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.group select:focus {
+  border-color: #6c63ff;
+  outline: none;
+}
 
 .group input:focus ~ label,
 .group input:not(:placeholder-shown) ~ label {
