@@ -100,7 +100,7 @@ body {
 
 /* botón */
 input[type="submit"] {
-  width: 100%;
+  width: 40%;
   height: 50px;
   border: none;
   background: #3d87b5;
@@ -111,6 +111,11 @@ input[type="submit"] {
   outline: none;
   transition: background 0.3s ease;
   margin-top: 20px;
+  text-align: center;
+}
+.boton-centro {
+  display: flex;
+  justify-content: center;
 }
 
 input[type="submit"]:hover {
