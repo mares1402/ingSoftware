@@ -16,9 +16,20 @@ body {
   border-radius: 10px;
 }
 
+.logo {
+  text-align: center;
+  padding: 20px 0 0 0;
+}
+
+.logo img {
+  width: 80px;
+  height: auto;
+}
+
 .formulario h1 {
   text-align: center;
-  padding: 0 0 20px 0;
+  margin-top: 5px;
+  padding: 0 0 15px 0;
   border-bottom: 1px solid silver;
 }
 
@@ -27,58 +38,51 @@ body {
   box-sizing: border-box;
 }
 
-.username,
-.contrasena {
+.campo {
   position: relative;
-  border-bottom: 2px solid silver;
   margin: 30px 0;
 }
 
-.username input,
-.contrasena input {
+.campo input {
   width: 100%;
   height: 40px;
   font-size: 16px;
   border: none;
   background: none;
   outline: none;
+  
 }
 
-.username label,
-.contrasena label {
+.campo label {
   position: absolute;
-  top: 50%;
-  left: 5px;
+  top: 60%;
   color: lightgray;
-  transform: translateY(-50%);
+  transform: translateY(-70%);
   font-size: 16px;
   pointer-events: none;
+  transition: 0.3s ease;
 }
 
-.username span::before,
-.contrasena span::before {
+.campo span::before {
   content: '';
   position: absolute;
-  top: 40px;
+  bottom: 0;
   left: 0;
-  width: 100%;
-  height: 2px;
-  background: black;
-  transition: .5s;
+  width: 100%; /* ← siempre visible */
+  height: 1px;
+  background: #000;
 }
 
-.username input:focus ~ label,
-.username input:not(:placeholder-shown) ~ label,
-.contrasena input:focus ~ label,
-.contrasena input:not(:placeholder-shown) ~ label {
+
+
+.campo input:focus ~ label,
+.campo input:not(:placeholder-shown) ~ label {
   top: 5px;
   color: black;
 }
 
-.username input:focus ~ span::before,
-.username input:not(:placeholder-shown) ~ span::before,
-.contrasena input:focus ~ span::before,
-.contrasena input:not(:placeholder-shown) ~ span::before {
+.campo input:focus ~ span::before,
+.campo input:not(:placeholder-shown) ~ span::before {
   width: 100%;
 }
 
@@ -92,11 +96,11 @@ input[type="submit"] {
   color: white;
   cursor: pointer;
   outline: none;
+  transition: 0.5s;
 }
 
 input[type="submit"]:hover {
   border-color: #0B9BF4;
-  transition: .5s;
 }
 
 .registrarse {
@@ -107,7 +111,7 @@ input[type="submit"]:hover {
 }
 
 .registrarse a {
-  color: #3d87b5;;
+  color: #3d87b5;
   text-decoration: none;
 }
 

@@ -11,50 +11,68 @@
 
 <body>
     <div class="formulario">
+        <div class="logo">
+            <img src="imgs/mount logo.jpg" alt="Logo de la plataforma">
+        </div>
         <h1>Crear Cuenta</h1>
         <form action="/signup" method="post" id="signupForm">
-            <div class="group">
-                <input type="text" name="name" required placeholder=" ">
-                <label>Nombre</label>
+            <div class="columnas">
+                <div class="col">
+                    <div class="campo">
+                        <input type="text" name="name" required placeholder=" ">
+                        <label>Nombre</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="text" name="apellido_paterno" required placeholder=" ">
+                        <label>Apellido paterno</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="text" name="hapellido_materno" required placeholder=" ">
+                        <label>Apellido materno</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <select name="Genero" required>
+                            <option value="" disabled selected hidden></option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Femenino">Femenino</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                        <label>Género</label>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="campo">
+                        <input type="email" name="email" required placeholder=" ">
+                        <label>Correo electrónico</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="tel" name="telefono" required placeholder=" ">
+                        <label>Teléfono</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="password" name="password" required placeholder=" ">
+                        <label>Contraseña</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="password" name="confirm_password" required placeholder=" ">
+                        <label>Confirmar contraseña</label>
+                        <span></span>
+                    </div>
+                </div>
             </div>
-            <div class="group">
-                <input type="text" name="apellido_paterno" required placeholder=" ">
-                <label>Apellido paterno</label>
-            </div>
-            <div class="group">
-                <input type="text" name="apellido_materno" required placeholder=" ">
-                <label>Apellido materno</label>
-            </div>
-            <div class="group">
-                <select name="Genero" required>
-                    <option value="" disabled selected>Selecciona una opción</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Femenino">Femenino</option>
-                    <option value="Otro">Otro</option>
-                </select>
-                <label>Género</label>
-            </div>
-            <div class="group">
-                <input type="email" name="email" required placeholder=" ">
-                <label>Correo electrónico</label>
-            </div>
-            <div class="group">
-                <input type="tel" name="telefono" required placeholder=" ">
-                <label>Teléfono</label>
-            </div>
-            <div class="group">
-                <input type="password" name="password" required placeholder=" ">
-                <label>Contraseña</label>
-            </div>
-            <div class="group">
-                <input type="password" name="confirm_password" required placeholder=" ">
-                <label>Confirmar contraseña</label>
-            </div>
+
             <input type="submit" value="Registrarse">
         </form>
 
         <div class="login-link">
-            ¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a>
+            ¿Ya tienes cuenta?.<a href="login.html">Inicia sesión</a>
         </div>
     </div>
 

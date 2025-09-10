@@ -1,8 +1,8 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-background: linear-gradient(175deg, #f59432, #c4711f, #de7002);
+  font-family: 'Lucida Sans', sans-serif;
+  background: linear-gradient(175deg, #f59432, #c4711f, #de7002);
   height: 100vh;
 }
 
@@ -11,74 +11,108 @@ background: linear-gradient(175deg, #f59432, #c4711f, #de7002);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 400px;
+  width: 700px;
   background: white;
   border-radius: 10px;
+  padding: 20px 40px 40px 40px;
+  box-sizing: border-box;
+}
+
+.logo {
+  text-align: center;
+  padding-top: 20px;
+}
+
+.logo img {
+  width: 80px;
+  height: auto;
 }
 
 .formulario h1 {
   text-align: center;
-  padding: 0 0 20px 0;
+  margin-top: 5px;
+  padding-bottom: 15px;
   border-bottom: 1px solid silver;
 }
 
 .formulario form {
-  padding: 0 40px;
   box-sizing: border-box;
 }
 
-.group {
-  position: relative;
-  margin: 20px 0;
+/* columnas paralelas */
+.columnas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
 }
 
-.group input,
-.group select {
+/* campos */
+.campo {
+  position: relative;
+  margin: 30px 0;
+}
+
+.campo input,
+.campo select {
   width: 100%;
-  padding: 12px 0;
+  height: 40px;
   font-size: 16px;
   border: none;
-  border-bottom: 2px solid #ccc;
   background: none;
   outline: none;
-  transition: 0.3s;
+  padding-top: 10px;
+  padding-left: 0;
+  box-sizing: border-box;
 }
 
-.group input:focus,
-.group input:not(:placeholder-shown),
-.group select:focus {
-  border-bottom-color: #054770;
-}
-
-.group label {
-  position: absolute;
-  top: -10px;
-  left: 10px;
-  background: white;
-  padding: 0 5px;
-  font-size: 14px;
-  color: #054770;
-  pointer-events: none;
-  transition: 0.2s ease all;
-}
-
-.group select {
-  border: 2px solid #ccc;
-  border-radius: 5px;
-  background-color: white;
-  color: #333;
+/* estilo para select */
+.campo select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  padding-right: 20px;
 }
 
-.group select:focus + label,
-.group select:not([value=""]) + label {
-  top: -10px;
-  font-size: 14px;
-  color: #054770;
+/* etiquetas flotantes */
+.campo label {
+  position: absolute;
+  top: 60%;
+  left: 0;
+  color: lightgray;
+  transform: translateY(-100%);
+  font-size: 16px;
+  pointer-events: none;
+  transition: 0.3s ease;
 }
 
+/* línea negra */
+.campo span::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: #000;
+}
+
+/* animación flotante */
+.campo input:focus ~ label,
+.campo input:not(:placeholder-shown) ~ label,
+.campo select:focus ~ label,
+.campo select:valid ~ label {
+  top: 5px;
+  color: black;
+}
+
+.campo input:focus ~ span::before,
+.campo input:not(:placeholder-shown) ~ span::before,
+.campo select:focus ~ span::before,
+.campo select:valid ~ span::before {
+  width: 100%;
+}
+
+/* botón */
 input[type="submit"] {
   width: 100%;
   height: 50px;
@@ -89,22 +123,24 @@ input[type="submit"] {
   color: white;
   cursor: pointer;
   outline: none;
+  transition: 0.5s;
+  margin-top: 20px;
 }
 
 input[type="submit"]:hover {
-  border-color:  #0B9BF4;
-  transition: .5s;
+  border-color: #0B9BF4;
 }
 
+/* enlace inferior */
 .login-link {
   text-align: center;
-  margin-top: 16px;
-  font-size: 14px;
-  color: #555;
+  margin-top: 30px;
+  font-size: 16px;
+  color: black;
 }
 
 .login-link a {
-  color: #054770;
+  color: #3d87b5;
   text-decoration: none;
 }
 
