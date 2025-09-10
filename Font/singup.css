@@ -86,30 +86,16 @@ body {
   position: absolute;
   left: 12px;
   color: lightgray;
-  transform: translateY(-100%);
   font-size: 16px;
   pointer-events: none;
   transition: top 0.3s ease, color 0.3s ease, font-size 0.3s ease;
   background: white;
-
 }
 
-
-
-/* animación flotante */
-.campo input:focus ~ label,
-.campo input:not(:placeholder-shown) ~ label,
-.campo select:focus ~ label,
-.campo select:valid ~ label {
-  top: -10px;
-  font-size: 13px;
-  color: #3d87b5;
-}
-
-.campo input:focus,
-.campo select:focus {
-  border-color: #3d87b5;
-  box-shadow: 0 0 5px rgba(61, 135, 181, 0.3);
+.label-oculto {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
 }
 
 /* botón */
