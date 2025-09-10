@@ -48,6 +48,8 @@ body {
 
 /* campos */
 .campo {
+  display: flex;
+  align-items: center;
   position: relative;
   margin: 30px 0;
 }
@@ -55,14 +57,16 @@ body {
 .campo input,
 .campo select {
   width: 100%;
-  height: 40px;
+  height: 45px;
   font-size: 16px;
-  border: none;
-  background: none;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 0 10px; /* ← centrado horizontal */
+  background: white;
   outline: none;
-  padding-top: 10px;
-  padding-left: 0;
   box-sizing: border-box;
+  line-height: 45px; /* ← centrado vertical */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* estilo para select */
@@ -70,65 +74,61 @@ body {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  padding-right: 20px;
+  padding-right: 30px;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="gray" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
 }
 
 /* etiquetas flotantes */
 .campo label {
   position: absolute;
-  top: 60%;
-  left: 0;
+  left: 12px;
   color: lightgray;
   transform: translateY(-100%);
   font-size: 16px;
   pointer-events: none;
-  transition: 0.3s ease;
+  transition: top 0.3s ease, color 0.3s ease, font-size 0.3s ease;
+  background: white;
+
 }
 
-/* línea negra */
-.campo span::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 1px;
-  background: #000;
-}
+
 
 /* animación flotante */
 .campo input:focus ~ label,
 .campo input:not(:placeholder-shown) ~ label,
 .campo select:focus ~ label,
 .campo select:valid ~ label {
-  top: 5px;
-  color: black;
+  top: -10px;
+  font-size: 13px;
+  color: #3d87b5;
 }
 
-.campo input:focus ~ span::before,
-.campo input:not(:placeholder-shown) ~ span::before,
-.campo select:focus ~ span::before,
-.campo select:valid ~ span::before {
-  width: 100%;
+.campo input:focus,
+.campo select:focus {
+  border-color: #3d87b5;
+  box-shadow: 0 0 5px rgba(61, 135, 181, 0.3);
 }
 
 /* botón */
 input[type="submit"] {
   width: 100%;
   height: 50px;
-  border: 1px solid;
+  border: none;
   background: #3d87b5;
   border-radius: 25px;
   font-size: 18px;
   color: white;
   cursor: pointer;
   outline: none;
-  transition: 0.5s;
+  transition: background 0.3s ease;
   margin-top: 20px;
 }
 
 input[type="submit"]:hover {
-  border-color: #0B9BF4;
+  background: #0B9BF4;
 }
 
 /* enlace inferior */
