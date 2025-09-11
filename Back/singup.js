@@ -1,3 +1,4 @@
+// script para manejar la visibilidad de las etiquetas en los campos del formulario
 document.querySelectorAll('.campo input, .campo select').forEach(elemento => {
     const label = elemento.parentElement.querySelector('label');
 
@@ -13,8 +14,3 @@ document.querySelectorAll('.campo input, .campo select').forEach(elemento => {
     elemento.addEventListener('input', actualizarLabel);
     elemento.addEventListener('change', actualizarLabel);
 });
-
-const encryptado = require('bcryptjs');
-const conexion = require('../Back/conexion');
-
-encryptado.encrypt()
