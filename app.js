@@ -2,7 +2,6 @@ const express = require('express');
 const path = require('path');
 const app = express();
 const conexion = require('./Back/conexion');
-const { registrarUsuario, verificarDuplicados } = require('./Back/singup');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

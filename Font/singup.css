@@ -61,13 +61,20 @@ body {
   font-size: 16px;
   border: 1px solid #ccc;
   border-radius: 5px;
-  padding: 0 10px; /* ← centrado horizontal */
-  background: white;
+  border-bottom: 1px solid #ccc;
+  background: transparent;
   outline: none;
+  padding: 0 10px;
   box-sizing: border-box;
-  line-height: 45px; /* ← centrado vertical */
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  line-height: 45px;
+  transition: border-color 0.3s ease;
 }
+
+.campo input:focus ~ span::before,
+.campo input:not(:placeholder-shown) ~ span::before {
+  width: 100%;
+}
+
 
 /* estilo para select */
 .campo select {
@@ -92,6 +99,20 @@ body {
   background: white;
 }
 
+/* línea animada inferior */
+.campo span::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0%;
+  max-width: 99%;
+  height: 3px;
+  background: linear-gradient(to right, rgba(61, 135, 181, 0.3), #3d87b5, rgba(61, 135, 181, 0.3));
+  transition: width 0.3s ease;
+}
+
 .label-oculto {
   opacity: 0;
   visibility: hidden;
@@ -113,6 +134,7 @@ input[type="submit"] {
   margin-top: 20px;
   text-align: center;
 }
+
 .boton-centro {
   display: flex;
   justify-content: center;

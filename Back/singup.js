@@ -13,3 +13,8 @@ document.querySelectorAll('.campo input, .campo select').forEach(elemento => {
     elemento.addEventListener('input', actualizarLabel);
     elemento.addEventListener('change', actualizarLabel);
 });
+
+const encryptado = require('bcryptjs');
+const conexion = require('../Back/conexion');
+
+encryptado.encrypt()
