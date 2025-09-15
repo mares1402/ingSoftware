@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear cuenta</title>
+    <link rel="stylesheet" href="signup.css">
+    <script src="signup.js" defer></script>
+</head>
+
+<body>
+    <div class="formulario">
+        <div class="logo">
+            <img src="imgs/mount logo.jpg" alt="Logo de la plataforma">
+        </div>
+        <h1>Crear Cuenta</h1>
+        <form id="signupForm">
+            <div class="columnas">
+                <div class="col">
+                    <div class="campo">
+                        <input type="text" name="name" required placeholder=" ">
+                        <label>Nombre</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="text" name="apellido_paterno" required placeholder=" ">
+                        <label>Apellido paterno</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="text" name="apellido_materno" required placeholder=" ">
+                        <label>Apellido materno</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <select name="Genero" required>
+                            <option value="" disabled selected hidden></option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Femenino">Femenino</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                        <label>Género</label>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="campo">
+                        <input type="email" name="email" required placeholder=" ">
+                        <label>Correo electrónico</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="text" name="telefono" required placeholder=" ">
+                        <label>Teléfono</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="password" name="password" required placeholder=" ">
+                        <label>Contraseña</label>
+                        <span></span>
+                    </div>
+                    <div class="campo">
+                        <input type="password" name="confirm_password" required placeholder=" ">
+                        <label>Confirmar contraseña</label>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="boton-centro">
+                <input type="submit" value="Registrarse">
+            </div>
+            <div id="signupMsg" style="color:red; text-align:center; margin-top:10px;"></div>
+            <div class="login-link">
+            ¿Ya tienes cuenta?. <a href="login.html">Inicia sesión</a>
+            </div>
+        </form>
+    </div>
+
+    
+</body>
+
+</html>

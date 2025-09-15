@@ -1,0 +1,162 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Lucida Sans', sans-serif;
+  background: linear-gradient(175deg, #f59432, #c4711f, #de7002);
+  height: 100vh;
+}
+
+.formulario {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 700px;
+  background: white;
+  border-radius: 10px;
+  padding: 20px 40px 40px 40px;
+  box-sizing: border-box;
+}
+
+.logo {
+  text-align: center;
+  padding-top: 20px;
+}
+
+.logo img {
+  width: 80px;
+  height: auto;
+}
+
+.formulario h1 {
+  text-align: center;
+  margin-top: 5px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid silver;
+}
+
+.formulario form {
+  box-sizing: border-box;
+}
+
+/* columnas paralelas */
+.columnas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+/* campos */
+.campo {
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin: 30px 0;
+}
+
+.campo input,
+.campo select {
+  width: 100%;
+  height: 45px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  border-bottom: 1px solid #ccc;
+  background: transparent;
+  outline: none;
+  padding: 0 10px;
+  box-sizing: border-box;
+  line-height: 45px;
+  transition: border-color 0.3s ease;
+}
+
+.campo input:focus ~ span::before,
+.campo input:not(:placeholder-shown) ~ span::before {
+  width: 100%;
+}
+
+
+/* estilo para select */
+.campo select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 30px;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="gray" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+}
+
+/* etiquetas flotantes */
+.campo label {
+  position: absolute;
+  left: 12px;
+  color: lightgray;
+  font-size: 16px;
+  pointer-events: none;
+  transition: top 0.3s ease, color 0.3s ease, font-size 0.3s ease;
+  background: white;
+}
+
+/* línea animada inferior */
+.campo span::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0%;
+  max-width: 99%;
+  height: 3px;
+  background: linear-gradient(to right, rgba(61, 135, 181, 0.3), #3d87b5, rgba(61, 135, 181, 0.3));
+  transition: width 0.3s ease;
+}
+
+.label-oculto {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+
+/* botón */
+input[type="submit"] {
+  width: 40%;
+  height: 50px;
+  border: none;
+  background: #3d87b5;
+  border-radius: 25px;
+  font-size: 18px;
+  color: white;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.3s ease;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.boton-centro {
+  display: flex;
+  justify-content: center;
+}
+
+input[type="submit"]:hover {
+  background: #0B9BF4;
+}
+
+/* enlace inferior */
+.login-link {
+  text-align: center;
+  margin-top: 30px;
+  font-size: 16px;
+  color: black;
+}
+
+.login-link a {
+  color: #3d87b5;
+  text-decoration: none;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
+}
