@@ -71,15 +71,21 @@ body {
 /* etiquetas flotantes animadas */
 .campo label {
   position: absolute;
-  left: 12px;
-  top: 50%;
+  left: 2px;
+  top: 48%;
   transform: translateY(-50%);
   color: lightgray;
   font-size: 16px;
   pointer-events: none;
   background: white;
-  padding: 0 5px;
   transition: top 0.3s ease, font-size 0.3s ease, color 0.3s ease;
+}
+
+.campo label i {
+  margin-right: 2px;
+  margin-left: 8px;
+  margin-top: 2px;
+  color: #142049;
 }
 
 .campo input:focus~label,
