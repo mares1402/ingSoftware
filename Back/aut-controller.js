@@ -38,18 +38,35 @@ router.post('/signup', async (req, res) => {
 
 // Login
 router.post('/login', (req, res) => {
-    const { email, password } = req.body;
+    const { usuario, password } = req.body;
 
     const sql = `SELECT * FROM Usuario WHERE correo = ?`;
-    conexion.query(sql, [email], async (err, results) => {
-        if (err) return res.status(500).send("Error en el servidor");
-        if (results.length === 0) return res.status(400).send("Usuario incorrecto");
+    conexion.query(sql, [usuario], async (err, results) => {
+        if (err) return res.status(500).json({ mensaje: "Error en el servidor" });
+
+        if (results.length === 0) {
+            // Usuario no existe
+            return res.status(404).json({ mensaje: "El usuario no está registrado", caso: 1 });
+        }
 
         const user = results[0];
         const match = await bcrypt.compare(password, user.password);
-        if (!match) return res.status(401).send("Contraseña incorrecta");
 
-        res.status(200).send("Login exitoso");
+        if (!match) {
+            // Contraseña incorrecta
+            return res.status(401).json({ mensaje: "Contraseña incorrecta", caso: 2 });
+        }
+
+        // Login exitoso
+        res.status(200).json({
+            mensaje: "Login exitoso",
+            user: {
+                id: user.id_usuario,
+                nombre: user.nombre,
+                correo: user.correo,
+                tipo_usuario: user.tipo_usuario
+            }
+        });
     });
 });
 

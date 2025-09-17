@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,14 +7,15 @@
     <title>Inicio de Sesión</title>
     <link rel="stylesheet" href="login.css">
 </head>
-
 <body>
     <div class="formulario">
         <div class="logo">
             <img src="imgs/mount logo.jpg" alt="Logo de la plataforma">
         </div>
         <h1>Inicio de sesión</h1>
-        <form action="/login" method="post">
+
+        <!-- Agregamos id="loginForm" -->
+        <form id="loginForm">
             <div class="campo">
                 <input type="text" name="usuario" required placeholder=" ">
                 <label>Nombre de usuario o email</label>
@@ -23,21 +23,26 @@
             </div>
 
             <div class="campo">
-                <input type="password" name="contrasena" required placeholder=" ">
+                <!-- Cambié el name a "password" para coincidir con login.js -->
+                <input type="password" name="password" required placeholder=" ">
                 <label>Contraseña</label>
                 <span></span>
             </div>
 
+            <!-- Botón debe estar DENTRO del form -->
+            <div class="boton-centro">
+                <input type="submit" value="Iniciar Sesión">
+            </div>
         </form>
-        <div class="boton-centro">
-            <input type="submit" value="Iniciar Sesión">
-        </div>
 
         <div class="registrarse">
-            No tengo cuenta. <a href="singup.html">Registrarse</a>
+            No tengo cuenta. <a href="signup.html">Registrarse</a>
         </div>
     </div>
-    <div id="errorMsg" style="color: red; text-align:center; margin-top:10px;"></div>
-</body>
 
+    <div id="errorMsg" style="color: red; text-align:center; margin-top:10px;"></div>
+
+    <!-- Cargar el script correcto -->
+    <script src="login.js" defer></script>
+</body>
 </html>

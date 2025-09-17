@@ -1,10 +1,10 @@
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault(); // Evita recargar la página
+    e.preventDefault();
 
     const form = e.target;
     const data = {
         usuario: form.usuario.value,
-        contrasena: form.contrasena.value
+        password: form.password.value
     };
 
     try {
@@ -17,25 +17,26 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         const result = await response.json();
 
         if (!response.ok) {
-            
+            // Mostramos mensaje según el caso
             if (result.caso === 1) {
-                document.getElementById('errorMsg').textContent = "Correo no registrado o credenciales incorrectas.";
+                document.getElementById('errorMsg').textContent = "Usuario no registrado.";
             } else if (result.caso === 2) {
                 document.getElementById('errorMsg').textContent = "Contraseña incorrecta.";
             } else {
-                document.getElementById('errorMsg').textContent = "Error desconocido.";
+                document.getElementById('errorMsg').textContent = result.mensaje || "Error desconocido.";
             }
             return;
         }
 
-        // Si login exitoso
-        document.getElementById('errorMsg').style.color = "green";
-        document.getElementById('errorMsg').textContent = "Login exitoso, redirigiendo...";
+        // Guardamos info del usuario
+        sessionStorage.setItem('user', JSON.stringify(result.user));
 
-        
-        setTimeout(() => {
-            window.location.href = "dashboard.html"; 
-        }, 1500);
+        // Redirección según tipo_usuario
+        if (result.user.tipo_usuario === 2) {
+            window.location.href = "admin-dashboard.html";
+        } else {
+            window.location.href = "dashboard.html";
+        }
 
     } catch (error) {
         console.error(error);
