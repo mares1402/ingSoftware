@@ -71,7 +71,7 @@ body {
 /* etiquetas flotantes animadas */
 .campo label {
   position: absolute;
-  left: 2px;
+  left: 4px;
   top: 48%;
   transform: translateY(-50%);
   color: lightgray;
