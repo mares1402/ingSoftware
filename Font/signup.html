@@ -7,7 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crear cuenta</title>
     <link rel="stylesheet" href="singup.css">
-    <link rel="stylesheet" href="singup.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="../Back/singup.js" defer></script>
 </head>
@@ -18,7 +17,7 @@
             <img src="imgs/mount logo.jpg" alt="Logo de la plataforma">
         </div>
         <h1>Crear Cuenta</h1>
-        <form action="/signup" method="post" id="signupForm">
+        <form id="signupForm">
             <div class="columnas">
                 <div class="col">
                     <div class="campo">
@@ -32,7 +31,7 @@
                         <span></span>
                     </div>
                     <div class="campo">
-                        <input type="text" name="hapellido_materno" required placeholder=" ">
+                        <input type="text" name="apellido_materno" required placeholder=" ">
                         <label>Apellido materno</label>
                         <span></span>
                     </div>
@@ -56,7 +55,7 @@
                         <span></span>
                     </div>
                     <div class="campo">
-                        <input type="tel" name="telefono" required placeholder=" ">
+                        <input type="text" name="telefono" required placeholder=" ">
                         <label>Teléfono</label>
                         <span></span>
                     </div>
@@ -74,28 +73,17 @@
                     </div>
                 </div>
             </div>
-
-        </form>
-        <div class="boton-centro">
-            <input type="submit" value="Registrarse">
-        </div>
-
-        <div class="login-link">
+            <div class="boton-centro">
+                <input type="submit" value="Registrarse">
+            </div>
+            <div id="signupMsg" style="color:red; text-align:center; margin-top:10px;"></div>
+            <div class="login-link">
             ¿Ya tienes cuenta?. <a href="login.html">Inicia sesión</a>
-        </div>
+            </div>
+        </form>
     </div>
 
-    <script>
-        // Validación de contraseñas en el cliente
-        document.getElementById('signupForm').addEventListener('submit', function (e) {
-            const password = this.password.value;
-            const confirm = this.confirm_password.value;
-            if (password !== confirm) {
-                e.preventDefault();
-                alert('Las contraseñas no coinciden. Por favor, verifica.');
-            }
-        });
-    </script>
+    
 </body>
 
 </html>
