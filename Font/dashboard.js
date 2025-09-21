@@ -1,3 +1,67 @@
+document.addEventListener('DOMContentLoaded', async () => {
+  // Lee sesión
+  const raw = sessionStorage.getItem('user');
+  if (!raw) return forceLogout();
+
+  let user;
+  try {
+    user = JSON.parse(raw);
+  } catch (e) {
+    console.error('user corrupto en sessionStorage', e);
+    return forceLogout();
+  }
+
+  // Validaciones básicas que detectan manipulación del objeto user
+  // Ajusta los campos según tu esquema real
+  const hasRequiredFields = user && (user.id || user.userId) && (user.nombre || user.name) && (user.tipo !== undefined);
+  if (!hasRequiredFields) return forceLogout();
+
+  // Acepta tipo como número o string; normaliza
+  const tipo = Number(user.tipo ?? user.tipo_usuario ?? -1);
+  if (Number.isNaN(tipo)) return forceLogout();
+
+  // Opcional: proteger rutas por rol. Ejemplo: páginas admin solo tipo === 2
+  const path = window.location.pathname.split('/').pop().toLowerCase(); // p.e. "admin.html"
+  const adminPaths = ['admin.html', 'manage.html']; // adapta según tus archivos
+  if (adminPaths.includes(path) && tipo !== 2) return forceLogout();
+
+  // Opcional y recomendado: validar el token en backend para detectar manipulación remota
+  // Si guardas un token en sessionStorage (p.e. user.token), valida con el servidor:
+  if (user.token) {
+    try {
+      const res = await fetch('/api/validate-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
+        body: JSON.stringify({ check: true })
+      });
+      if (!res.ok) return forceLogout();
+      const body = await res.json();
+      if (!body.valid) return forceLogout();
+    } catch (err) {
+      console.error('Error validando token', err);
+      return forceLogout();
+    }
+  }
+
+  // Si llegaste aquí, la sesión parece válida: continúa cargando la UI normalmente
+
+  // Función que borra sesión y redirige al index/login
+  function forceLogout() {
+    sessionStorage.removeItem('user');
+    localStorage.removeItem('user'); // si usas localStorage en algún lado
+    // opcional: borrar cookies de sesión (si las usas)
+    // document.cookie = 'session=; Max-Age=0; path=/;';
+
+    // redirige a la página pública (index o login)
+    window.location.replace('index.html'); // replace evita dejar historial para "ir atrás"
+  }
+
+  // Adicional: detectar cambios de URL por manipulación de hash / history
+  // y volver a validar si la ruta cambia
+  window.addEventListener('popstate', () => { /* podrías volver a ejecutar validaciones */ });
+  window.addEventListener('hashchange', () => { /* idem */ });
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const raw = sessionStorage.getItem('user');
   if (!raw) {
