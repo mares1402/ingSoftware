@@ -1,8 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Intentamos leer el usuario almacenado en sessionStorage
   const raw = sessionStorage.getItem('user');
   if (!raw) {
-    // No hay sesión -> redirigir al login
     window.location.href = 'login.html';
     return;
   }
@@ -17,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Rellenar la UI
   const avatar = document.getElementById('avatar');
   const userFullName = document.getElementById('userFullName');
   const userEmail = document.getElementById('userEmail');
@@ -26,30 +23,47 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnLogout = document.getElementById('btnLogout');
   const btnEdit = document.getElementById('btnEdit');
 
-  // Usamos nombre + paterno para mostrar el avatar (iniciales)
-  const initials = ((user.nombre || '')[0] || '').toUpperCase() + ((user.paterno || '')[0] || '').toUpperCase();
+  // Normalizar propiedades que puedan venir con nombres distintos
+  const nombre = user.nombre || user.name || user.nameUser || '';
+  const paterno = user.paterno || user.apellido_paterno || user.apellido || '';
+  const materno = user.materno || user.apellido_materno || '';
+  const correo = user.correo || user.email || user.username || '';
+  const genero = user.genero || user.Genero || user.gender || '—';
+
+  // Determinar tipo numérico robustamente (acepta string o número)
+  const tipoRaw = user.tipo ?? user.tipo_usuario ?? user.role ?? user.userType ?? null;
+  const tipo = tipoRaw === null ? null : Number(tipoRaw);
+
+  // Iniciales y UI básica
+  const initials = (nombre[0] || '').toUpperCase() + (paterno[0] || '').toUpperCase();
   avatar.textContent = initials || 'U';
 
-  userFullName.textContent = `${user.nombre || ''} ${user.paterno || ''} ${user.materno || ''}`.trim() || 'Usuario';
-  userEmail.textContent = user.correo || '';
+  userFullName.textContent = `${nombre} ${paterno} ${materno}`.trim() || 'Usuario';
+  userEmail.textContent = correo;
 
+  // Mostrar tipo y badge cuando tipo === 2 (Administrador)
+  const esAdmin = tipo === 2;
   infoText.innerHTML = `
-    <strong>Género:</strong> ${user.genero || '—'} <br>
-    <strong>Tipo:</strong> ${user.tipo === 2 ? 'Administrador' : 'Cliente'}
-    ${user.tipo === 2 ? '<span class="admin-badge">ADMIN</span>' : ''}
+    <strong>Género:</strong> ${genero} <br>
+    <strong>Tipo:</strong> ${esAdmin ? 'Administrador' : 'Cliente'}
+    ${esAdmin ? '<span class="admin-badge" aria-hidden="true">ADMIN</span>' : ''}
   `;
 
-  // Mostrar área admin si tipo == 2
-  if (user.tipo === 2 || user.tipo_usuario === 2) {
+  // Mostrar/ocultar área de administración
+  if (esAdmin) {
     adminArea.style.display = 'block';
+    adminArea.setAttribute('aria-hidden', 'false');
+  } else {
+    adminArea.style.display = 'none';
+    adminArea.setAttribute('aria-hidden', 'true');
   }
 
-  // Edit profile (puedes enlazar a formulario real)
+  // Botones
   btnEdit.addEventListener('click', () => {
-    alert('Aquí iría la pantalla de edición de perfil (aún no implementada).');
+    // Reemplaza con la navegación o lógica de edición real
+    alert('Aquí iría la pantalla de edición de perfil.');
   });
 
-  // Logout: limpiar sessionStorage y volver al login
   btnLogout.addEventListener('click', () => {
     sessionStorage.removeItem('user');
     window.location.href = 'login.html';

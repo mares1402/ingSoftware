@@ -33,7 +33,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
         // Redirección según tipo_usuario
         if (result.user.tipo_usuario === 2) {
-            window.location.href = "admin-dashboard.html";
+            window.location.href = "dashboard.html";
         } else {
             window.location.href = "dashboard.html";
         }
