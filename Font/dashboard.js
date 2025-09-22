@@ -23,33 +23,48 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnLogout = document.getElementById('btnLogout');
   const btnEdit = document.getElementById('btnEdit');
 
-  // Normalizar propiedades que puedan venir con nombres distintos
+  // Normalizar propiedades
   const nombre = user.nombre || user.name || user.nameUser || '';
   const paterno = user.paterno || user.apellido_paterno || user.apellido || '';
   const materno = user.materno || user.apellido_materno || '';
   const correo = user.correo || user.email || user.username || '';
-  const genero = user.genero || user.Genero || user.gender || '—';
 
-  // Determinar tipo numérico robustamente (acepta string o número)
-  const tipoRaw = user.tipo ?? user.tipo_usuario ?? user.role ?? user.userType ?? null;
+  // Género con limpieza
+  const generoRaw = user.genero || user.Genero || user.gender;
+  const genero = generoRaw && generoRaw.trim() ? generoRaw.trim() : '—';
+
+  // Tipo de usuario
+  const tipoRaw = user.tipo || user.tipo_usuario || user.role || user.userType || null;
   const tipo = tipoRaw === null ? null : Number(tipoRaw);
+  const esAdmin = tipo === 2;
 
-  // Iniciales y UI básica
+  // Iniciales
   const initials = (nombre[0] || '').toUpperCase() + (paterno[0] || '').toUpperCase();
   avatar.textContent = initials || 'U';
 
   userFullName.textContent = `${nombre} ${paterno} ${materno}`.trim() || 'Usuario';
   userEmail.textContent = correo;
 
-  // Mostrar tipo y badge cuando tipo === 2 (Administrador)
-  const esAdmin = tipo === 2;
+  // Estilo visual para género
+  let generoHTML = `<strong>Género:</strong> `;
+  if (genero === 'Masculino') {
+    generoHTML += `<span style="color:#007bff">Masculino ♂️</span>`;
+  } else if (genero === 'Femenino') {
+    generoHTML += `<span style="color:#e83e8c">Femenino ♀️</span>`;
+  } else if (genero !== '—') {
+    generoHTML += `<span style="color:#6f42c1">${genero} ⚧️</span>`;
+  } else {
+    generoHTML += `<span style="color:#999">—</span>`;
+  }
+
+  // Mostrar info
   infoText.innerHTML = `
-    <strong>Género:</strong> ${genero} <br>
+    ${generoHTML} <br>
     <strong>Tipo:</strong> ${esAdmin ? 'Administrador' : 'Cliente'}
     ${esAdmin ? '<span class="admin-badge" aria-hidden="true">ADMIN</span>' : ''}
   `;
 
-  // Mostrar/ocultar área de administración
+  // Mostrar área admin
   if (esAdmin) {
     adminArea.style.display = 'block';
     adminArea.setAttribute('aria-hidden', 'false');
@@ -60,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Botones
   btnEdit.addEventListener('click', () => {
-    // Reemplaza con la navegación o lógica de edición real
     alert('Aquí iría la pantalla de edición de perfil.');
   });
 

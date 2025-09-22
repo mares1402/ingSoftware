@@ -63,7 +63,10 @@ router.post('/login', (req, res) => {
             user: {
                 id: user.id_usuario,
                 nombre: user.nombre,
+                paterno: user.paterno,
+                materno: user.materno,
                 correo: user.correo,
+                genero: user.genero, // 👈 ¡Aquí está la clave!
                 tipo_usuario: user.tipo_usuario
             }
         });
