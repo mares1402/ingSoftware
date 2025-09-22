@@ -29,15 +29,10 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       return;
     }
 
+    window.location.href = '/dashboard';
+
     // Guardar info del usuario en sessionStorage
     sessionStorage.setItem('user', JSON.stringify(result.user));
-
-    // Redirigir según tipo de usuario
-    if (result.user.tipo_usuario === 2) {
-      window.location.href = "dashboard.html";
-    } else {
-      window.location.href = "dashboard.html";
-    }
 
   } catch (error) {
     console.error(error);

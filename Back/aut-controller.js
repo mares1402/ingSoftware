@@ -38,39 +38,42 @@ router.post('/signup', async (req, res) => {
 
 // Login
 router.post('/login', (req, res) => {
-    const { usuario, password } = req.body;
+  const { usuario, password } = req.body;
 
-    const sql = `SELECT * FROM Usuario WHERE correo = ?`;
-    conexion.query(sql, [usuario], async (err, results) => {
-        if (err) return res.status(500).json({ mensaje: "Error en el servidor" });
+  const sql = `SELECT * FROM Usuario WHERE correo = ?`;
+  conexion.query(sql, [usuario], async (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ mensaje: 'Error en el servidor' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ mensaje: 'Usuario no registrado', caso: 1 });
+    }
 
-        if (results.length === 0) {
-            // Usuario no existe
-            return res.status(404).json({ mensaje: "El usuario no está registrado", caso: 1 });
-        }
+    const user = results[0];
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ mensaje: 'Contraseña incorrecta', caso: 2 });
+    }
 
-        const user = results[0];
-        const match = await bcrypt.compare(password, user.password);
+    // Construir objeto de sesión (NO incluir datos sensibles)
+    const sessionUser = {
+      id_usuario: user.id_usuario,
+      nombre: user.nombre,
+      paterno: user.paterno,
+      materno: user.materno,
+      correo: user.correo,
+      genero: user.genero,
+      telefono: user.telefono,
+      tipo_usuario: Number(user.tipo_usuario) // 1 o 2
+    };
 
-        if (!match) {
-            // Contraseña incorrecta
-            return res.status(401).json({ mensaje: "Contraseña incorrecta", caso: 2 });
-        }
+    // Guardar en sesión
+    req.session.user = sessionUser;
 
-        // Login exitoso
-        res.status(200).json({
-            mensaje: "Login exitoso",
-            user: {
-                id: user.id_usuario,
-                nombre: user.nombre,
-                paterno: user.paterno,
-                materno: user.materno,
-                correo: user.correo,
-                genero: user.genero, // 👈 ¡Aquí está la clave!
-                tipo_usuario: user.tipo_usuario
-            }
-        });
-    });
+    // Responder (opcional) con info
+    res.json({ mensaje: 'Login exitoso', user: sessionUser });
+  });
 });
 
 module.exports = router;
