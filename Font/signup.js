@@ -15,6 +15,12 @@ document.querySelectorAll('.campo input, .campo select').forEach(elemento => {
     elemento.addEventListener('change', actualizarLabel);
 });
 
+// Validar entrada en tiempo real para el campo de teléfono
+const campoTelefono = document.querySelector('input[name="telefono"]');
+campoTelefono.addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, ''); // Elimina todo lo que no sea dígito
+});
+
 document.getElementById('signupForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
