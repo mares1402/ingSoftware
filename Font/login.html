@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="login.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
+
 <body>
     <div class="formulario">
         <div class="logo">
@@ -20,18 +22,16 @@
             <div class="campo">
                 <input type="text" name="usuario" required placeholder=" ">
                 <label>
-                    <i class="fa-solid fa-envelope"></i> 
+                    <i class="fa-solid fa-envelope"></i>
                     tu@correo.com</label>
                 <span></span>
             </div>
 
             <div class="campo">
-                <!-- Cambié el name a "password" para coincidir con login.js -->
-                <input type="password" name="password" required placeholder=" ">
-                <label>
-                    <i class="fa-solid fa-key"></i>
-                    Contraseña</label>
-                <span></span>
+                <input type="password" name="password" id="password" required placeholder=" ">
+                <label><i class="fa-solid fa-key"></i> Contraseña</label>
+                <span></span> <!-- este es solo para la línea animada -->
+                <div class="toggle-password"><i class="fa-solid fa-eye"></i></div> <!-- ícono separado -->
             </div>
 
             <!-- Botón debe estar DENTRO del form -->
@@ -50,4 +50,5 @@
     <!-- Cargar el script correcto -->
     <script src="login.js" defer></script>
 </body>
+
 </html>

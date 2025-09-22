@@ -63,25 +63,36 @@
                         <span></span>
                     </div>
                     <div class="campo">
-                        <input type="text" name="telefono" required placeholder=" " maxlength="15" id="telefono" />
+                        <input type="tel" name="telefono" id="telefono" required minlength="10" maxlength="15"
+                            placeholder=" " pattern="\d{10,15}" />
                         <label>
                             <i class="fa-solid fa-phone"></i>
-                            Teléfono</label>
+                            Teléfono
+                        </label>
                         <span></span>
                     </div>
                     <div class="campo">
-                        <input type="password" name="password" required placeholder=" ">
+                        <input type="password" name="password" id="password" required placeholder=" ">
                         <label>
                             <i class="fa-solid fa-key"></i>
-                            Contraseña</label>
-                        <span></span>
+                            Contraseña
+                        </label>
+                        <span></span> <!-- Línea animada -->
+                        <div class="toggle-password" onclick="togglePassword('password', this)">
+                            <i class="fa-solid fa-eye"></i>
+                        </div>
                     </div>
+
                     <div class="campo">
-                        <input type="password" name="confirm_password" required placeholder=" ">
-                        <label> 
+                        <input type="password" name="confirm_password" id="confirm_password" required placeholder=" ">
+                        <label>
                             <i class="fa-solid fa-key"></i>
-                            Confirmar contraseña</label>
-                        <span></span>
+                            Confirmar contraseña
+                        </label>
+                        <span></span> <!-- Línea animada -->
+                        <div class="toggle-password" onclick="togglePassword('confirm_password', this)">
+                            <i class="fa-solid fa-eye"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -90,12 +101,12 @@
             </div>
             <div id="signupMsg" style="color:red; text-align:center; margin-top:10px;"></div>
             <div class="login-link">
-            ¿Ya tienes cuenta?. <a href="login.html">Inicia sesión</a>
+                ¿Ya tienes cuenta?. <a href="login.html">Inicia sesión</a>
             </div>
         </form>
     </div>
 
-    
+
 </body>
 
 </html>

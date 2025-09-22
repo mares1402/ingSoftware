@@ -109,11 +109,23 @@ body {
   transition: width 0.3s ease;
 }
 
+/* ícono mostrar/ocultar contraseña */
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: gray;
+  z-index: 2;
+}
 
 .campo input:focus~span::before,
 .campo input:not(:placeholder-shown)~span::before {
   width: 100%;
 }
+
+
 
 /* botón */
 input[type="submit"] {

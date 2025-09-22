@@ -62,7 +62,7 @@ body {
   border: 1px solid #ccc;
   border-radius: 5px;
   border-bottom: 1px solid #ccc;
-  background: transparent;
+  background: white;
   outline: none;
   padding: 0 10px;
   box-sizing: border-box;
@@ -130,11 +130,29 @@ body {
   transition: width 0.3s ease;
 }
 
+/* ícono mostrar/ocultar contraseña */
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: gray;
+  z-index: 2;
+}
+
 .label-oculto {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease;
 }
+
+.label-activa {
+  top: -10px !important;
+  font-size: 12px !important;
+  color: #3d87b5 !important;
+}
+
 
 /* botón */
 input[type="submit"] {
