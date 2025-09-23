@@ -21,21 +21,21 @@
             <div class="columnas">
                 <div class="col">
                     <div class="campo">
-                        <input type="text" name="name" required placeholder=" ">
+                        <input type="text" name="name" required  maxlength="29"placeholder=" ">
                         <label>
                             <i class="fa-solid fa-user"></i>
                             Nombre</label>
                         <span></span>
                     </div>
                     <div class="campo">
-                        <input type="text" name="apellido_paterno" required placeholder=" ">
+                        <input type="text" name="apellido_paterno" required maxlength="20" placeholder=" ">
                         <label>
                             <i class="fa-solid fa-user"></i>
                             Apellido paterno</label>
                         <span></span>
                     </div>
                     <div class="campo">
-                        <input type="text" name="apellido_materno" required placeholder=" ">
+                        <input type="text" name="apellido_materno" required maxlength="20" placeholder=" ">
                         <label>
                             <i class="fa-solid fa-user"></i>
                             Apellido materno</label>
@@ -56,7 +56,7 @@
                 </div>
                 <div class="col">
                     <div class="campo">
-                        <input type="email" name="email" required placeholder=" ">
+                        <input type="email" name="email" required maxlength="35" placeholder=" ">
                         <label>
                             <i class="fa-solid fa-envelope"></i>
                             Email</label>
@@ -72,7 +72,8 @@
                         <span></span>
                     </div>
                     <div class="campo">
-                        <input type="password" name="password" id="password" required placeholder=" ">
+                        <input type="password" name="password" id="password" required minlength="8" maxlength="20"
+                            placeholder=" ">
                         <label>
                             <i class="fa-solid fa-key"></i>
                             Contraseña
@@ -84,7 +85,8 @@
                     </div>
 
                     <div class="campo">
-                        <input type="password" name="confirm_password" id="confirm_password" required placeholder=" ">
+                        <input type="password" name="confirm_password" id="confirm_password" required minlength="8"
+                            maxlength="20" placeholder=" ">
                         <label>
                             <i class="fa-solid fa-key"></i>
                             Confirmar contraseña
