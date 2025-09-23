@@ -20,7 +20,7 @@
         <!-- Agregamos id="loginForm" -->
         <form id="loginForm">
             <div class="campo">
-                <input type="text" name="usuario" required placeholder=" ">
+                <input type="text" name="usuario" required required maxlength="35" placeholder=" ">
                 <label>
                     <i class="fa-solid fa-envelope"></i>
                     tu@correo.com</label>
@@ -28,7 +28,8 @@
             </div>
 
             <div class="campo">
-                <input type="password" name="password" id="password" required placeholder=" ">
+                <input type="password" name="password" id="password" required required minlength="8" maxlength="20"
+                    placeholder=" ">
                 <label><i class="fa-solid fa-key"></i> Contraseña</label>
                 <span></span> <!-- este es solo para la línea animada -->
                 <div class="toggle-password"><i class="fa-solid fa-eye"></i></div> <!-- ícono separado -->
