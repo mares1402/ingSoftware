@@ -36,14 +36,23 @@ const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
 
 // Validar entrada en tiempo real para la contraseña (mínimo 8, máximo 20 caracteres)
 const campoPassword = document.querySelector('input[name="password"]');
+const idioma = navigator.language.startsWith('es') ? 'es' : 'en';
 
 campoPassword.addEventListener('input', function () {
   const longitud = this.value.length;
 
   if (longitud < 8) {
-    this.setCustomValidity('minlength');
+    this.setCustomValidity(
+      idioma === 'es'
+        ? 'Ocupas mínimo 8 caracteres.'
+        : 'You need at least 8 characters.'
+    );
   } else if (longitud > 20) {
-    this.setCustomValidity('maxlength');
+    this.setCustomValidity(
+      idioma === 'es'
+        ? 'No debe exceder 20 caracteres.'
+        : 'Must not exceed 20 characters.'
+    );
   } else {
     this.setCustomValidity('');
   }
