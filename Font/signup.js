@@ -34,6 +34,23 @@ const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
   });
 });
 
+// Validar entrada en tiempo real para la contraseña (mínimo 8, máximo 20 caracteres)
+const campoPassword = document.querySelector('input[name="password"]');
+
+campoPassword.addEventListener('input', function () {
+  const longitud = this.value.length;
+
+  if (longitud < 8) {
+    this.setCustomValidity('minlength');
+  } else if (longitud > 20) {
+    this.setCustomValidity('maxlength');
+  } else {
+    this.setCustomValidity('');
+  }
+
+  this.reportValidity();
+});
+
 // Mostrar/ocultar contraseña
 document.querySelectorAll('.toggle-password').forEach(toggle => {
   toggle.addEventListener('click', () => {
