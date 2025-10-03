@@ -79,6 +79,36 @@ document.querySelectorAll('.toggle-password').forEach(toggle => {
   });
 });
 
+/**
+ * Muestra una notificación flotante (toast) en la esquina superior derecha.
+ * @param {string} mensaje El texto que se mostrará en la notificación.
+ * @param {string} [tipo='error'] El tipo de notificación ('error' o 'exito').
+ */
+function mostrarNotificacion(mensaje, tipo = 'error') {
+  const notificacion = document.createElement('div');
+  notificacion.textContent = mensaje;
+  notificacion.style.position = 'fixed';
+  notificacion.style.top = '20px';
+  notificacion.style.right = '20px';
+  notificacion.style.padding = '15px 20px';
+  notificacion.style.borderRadius = '8px';
+  notificacion.style.color = 'white';
+  notificacion.style.fontFamily = 'Arial, sans-serif';
+  notificacion.style.zIndex = '1000';
+  notificacion.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+  notificacion.style.opacity = '0';
+  notificacion.style.transition = 'opacity 0.5s, transform 0.5s';
+  notificacion.style.transform = 'translateX(100%)';
+  notificacion.style.backgroundColor = tipo === 'error' ? '#dc3545' : '#28a745';
+  document.body.appendChild(notificacion);
+  setTimeout(() => { notificacion.style.opacity = '1'; notificacion.style.transform = 'translateX(0)'; }, 10);
+  setTimeout(() => {
+    notificacion.style.opacity = '0';
+    notificacion.style.transform = 'translateX(100%)';
+    notificacion.addEventListener('transitionend', () => notificacion.remove());
+  }, 4000);
+}
+
 // Enviar formulario de registro
 document.getElementById('signupForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -86,8 +116,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
   const form = e.target;
 
   if (form.password.value !== form.confirm_password.value) {
-    document.getElementById('signupMsg').style.color = "red";
-    document.getElementById('signupMsg').textContent = "Las contraseñas no coinciden.";
+    mostrarNotificacion("Las contraseñas no coinciden.");
     return;
   }
 
@@ -111,21 +140,17 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     const result = await response.text();
 
     if (!response.ok) {
-      document.getElementById('signupMsg').style.color = "red";
-      document.getElementById('signupMsg').textContent = result;
+      mostrarNotificacion(result);
       return;
     }
 
-    document.getElementById('signupMsg').style.color = "green";
-    document.getElementById('signupMsg').textContent = "Registro exitoso. Redirigiendo a login...";
-
+    mostrarNotificacion("Registro exitoso. Redirigiendo a login...", "exito");
     setTimeout(() => {
       window.location.href = "login.html";
     }, 2000);
 
   } catch (error) {
     console.error(error);
-    document.getElementById('signupMsg').style.color = "red";
-    document.getElementById('signupMsg').textContent = "Error de conexión con el servidor.";
+    mostrarNotificacion("Error de conexión con el servidor.");
   }
 });

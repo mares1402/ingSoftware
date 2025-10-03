@@ -1,3 +1,33 @@
+/**
+ * Muestra una notificación flotante (toast) en la esquina superior derecha.
+ * @param {string} mensaje El texto que se mostrará en la notificación.
+ * @param {string} [tipo='error'] El tipo de notificación ('error' o 'exito').
+ */
+function mostrarNotificacion(mensaje, tipo = 'error') {
+  const notificacion = document.createElement('div');
+  notificacion.textContent = mensaje;
+  notificacion.style.position = 'fixed';
+  notificacion.style.top = '20px';
+  notificacion.style.right = '20px';
+  notificacion.style.padding = '15px 20px';
+  notificacion.style.borderRadius = '8px';
+  notificacion.style.color = 'white';
+  notificacion.style.fontFamily = 'Arial, sans-serif';
+  notificacion.style.zIndex = '1000';
+  notificacion.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+  notificacion.style.opacity = '0';
+  notificacion.style.transition = 'opacity 0.5s, transform 0.5s';
+  notificacion.style.transform = 'translateX(100%)';
+  notificacion.style.backgroundColor = tipo === 'error' ? '#dc3545' : '#28a745';
+  document.body.appendChild(notificacion);
+  setTimeout(() => { notificacion.style.opacity = '1'; notificacion.style.transform = 'translateX(0)'; }, 10);
+  setTimeout(() => {
+    notificacion.style.opacity = '0';
+    notificacion.style.transform = 'translateX(100%)';
+    notificacion.addEventListener('transitionend', () => notificacion.remove());
+  }, 4000);
+}
+
 // Enviar formulario de login
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -20,11 +50,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     if (!response.ok) {
       // Mostrar mensaje de error según el caso
       if (result.caso === 1) {
-        document.getElementById('errorMsg').textContent = "Usuario no registrado.";
+        mostrarNotificacion("Usuario no registrado.");
       } else if (result.caso === 2) {
-        document.getElementById('errorMsg').textContent = "Contraseña incorrecta.";
+        mostrarNotificacion("Contraseña incorrecta.");
       } else {
-        document.getElementById('errorMsg').textContent = result.mensaje || "Error desconocido.";
+        mostrarNotificacion(result.mensaje || "Error desconocido.");
       }
       return;
     }
@@ -36,7 +66,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
   } catch (error) {
     console.error(error);
-    document.getElementById('errorMsg').textContent = "Error de conexión con el servidor.";
+    mostrarNotificacion("Error de conexión con el servidor.");
   }
 });
 
