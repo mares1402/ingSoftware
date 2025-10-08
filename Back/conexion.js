@@ -1,10 +1,9 @@
 require('dotenv').config();
 const mysql = require('mysql2');
-pool
 
 // Se cambia createConnection por createPool para manejar las conexiones de forma más robusta.
 // El pool previene que las conexiones se cierren por inactividad.
-let pool = mysql.createPool({
+const pool = mysql.createPool({
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
     user: process.env.DB_USER,
@@ -16,3 +15,5 @@ let pool = mysql.createPool({
 });
 
 console.log("Pool de conexiones creado.");
+
+module.exports = pool;
