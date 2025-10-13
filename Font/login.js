@@ -59,7 +59,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       return;
     }
 
-    window.location.href = '/dashboard';
+    window.location.href = '/'; // Redirigir a la página de inicio
 
     // Guardar info del usuario en sessionStorage
     sessionStorage.setItem('user', JSON.stringify(result.user));

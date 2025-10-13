@@ -4,35 +4,116 @@
         <meta charset="UFT-8">
         <meta http-equiv="X-UA-Compatible" content="IE-edge">
         <meta name="viewport" content="width-device-width, initial-scale-1.0">
-        <title>Tienda Digital</title>
+        <title>Ferretería CNC - Componentes y Herramientas</title>
         <link rel="stylesheet" href="Font/index.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     </head>
     <body>
-        <header class="header">
-            <div class="logo">
-                <a href="index.html"><img src="Font/imgs/mount logo.jpg" alt="Logo" ></a>
+        <div class="top-bar">
+            <div class="social-links">
+                <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                <a href="#" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+                <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
             </div>
-            <div class="search-bar">
-                <input type="text" placeholder="Buscar en toda la tienda..." class="search-input">
+        </div>
+        <header class="main-header">
+            <a href="index.html" class="logo">
+                <img src="Font/imgs/mount logo.jpg" alt="Logo de Ferretería CNC" >
+            </a>
+
+            <div class="header-content">
+                <nav class="main-nav">
+                    <ul>
+                        <li><a href="#">FRESAS</a></li>
+                        <li><a href="#">MOTORES</a></li>
+                        <li><a href="#">MECÁNICA</a></li>
+                        <li><a href="#">ELECTRÓNICA</a></li>
+                        <li><a href="#">HERRAMIENTAS</a></li>
+                    </ul>
+                </nav>
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" placeholder="Buscar fresas, motores, guías..." class="search-input">
+                </div>
+                <div class="user-actions">
+                    <a href="Font/login.html" class="login-link" >Iniciar sesión</a>
+                    <span class="separator">|</span>
+                    <a href="Font/signup.html" class="login-link">Registrarse</a>
+                </div>
             </div>
-            <div class="user-actions">
-                <a href="Font/login.html" class="login-link" >Iniciar sesión</a>
-                <p>ó</p>
-                <a href="Font/signup.html" class="login-link">Registrarse</a>
-            </div>
+
+            <button class="mobile-nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
         </header>
-        <nav class="nav-categories">
-            <ul>
-                <li><a href="#">MONITORES</a></li>
-                <li><a href="#">MEMORIAS</a></li>
-                <li><a href="#">DISCOS DUROS</a></li>
-                <li><a href="#">CABLES</a></li>
-                <li><a href="#">ACCESORIOS</a></li>
-            </ul>
-        </nav>
         <main class="main-content">
-            <h2>Bienvenido a la tienda en línea</h2>
-            <p>Encuentra lo último en tecnología para tu hogar.</p>
+            <div class="page-layout">
+                <aside class="filter-sidebar">
+                    <button class="close-filter-btn" aria-label="Cerrar filtros">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <h3>Filtros</h3>
+                    <div class="filter-group">
+                        <h4>Categoría</h4>
+                        <ul>
+                            <li><label><input type="checkbox" name="category" value="fresas"> Fresas y Brocas</label></li>
+                            <li><label><input type="checkbox" name="category" value="motores"> Motores</label></li>
+                            <li><label><input type="checkbox" name="category" value="mecanica"> Componentes Mecánicos</label></li>
+                            <li><label><input type="checkbox" name="category" value="electronica"> Electrónica</label></li>
+                        </ul>
+                    </div>
+                    <div class="filter-group">
+                        <h4>Marca</h4>
+                        <ul>
+                            <li><label><input type="checkbox" name="brand" value="hiwin"> Hiwin</label></li>
+                            <li><label><input type="checkbox" name="brand" value="stepperonline"> StepperOnline</label></li>
+                            <li><label><input type="checkbox" name="brand" value="duet3d"> Duet3D</label></li>
+                        </ul>
+                    </div>
+                    <button class="filter-button">Aplicar Filtros</button>
+                </aside>
+                <div class="products-area">
+                    <h2 class="area-title">Nuestros Productos</h2>
+                    <button class="mobile-filter-toggle" aria-label="Mostrar filtros" aria-expanded="false">
+                        <i class="fa-solid fa-filter"></i> Mostrar Filtros
+                    </button>
+                    <p class="area-subtitle">Todo lo que necesitas para tus proyectos de manufactura y automatización.</p>
+                    <section class="product-grid">
+                        <!-- Producto 1 -->
+                        <div class="product-card">
+                            <img src="Font/imgs/producto_placeholder.png" alt="Producto 1" class="product-image">
+                            <div class="product-info">
+                                <h3 class="product-title">Fresa de Carburo 2 Filos</h3>
+                                <p class="product-description">Fresa de 1/4" de diámetro, ideal para corte de madera y plásticos.</p>
+                                <button class="buy-button">Comprar</button>
+                            </div>
+                        </div>
+                        <!-- Producto 2 -->
+                        <div class="product-card">
+                            <img src="Font/imgs/producto_placeholder.png" alt="Producto 2" class="product-image">
+                            <div class="product-info">
+                                <h3 class="product-title">Motor a Pasos NEMA 23</h3>
+                                <p class="product-description">Motor de alto torque para ejes de maquinaria CNC. 3.0A, 2.8N.m.</p>
+                                <button class="buy-button">Comprar</button>
+                            </div>
+                        </div>
+                        <!-- Producto 3 -->
+                        <div class="product-card">
+                            <img src="Font/imgs/producto_placeholder.png" alt="Producto 3" class="product-image">
+                            <div class="product-info">
+                                <h3 class="product-title">Guía Lineal MGN12 500mm</h3>
+                                <p class="product-description">Guía lineal de precisión con balero para movimiento suave y exacto.</p>
+                                <button class="buy-button">Comprar</button>
+                            </div>
+                        </div>
+                        <!-- Puedes agregar más productos aquí -->
+                    </section>
+                </div>
+            </div>
         </main>
+        <div class="overlay"></div>
+        
+        <script src="Font/main.js"></script>
     </body>
 </html>
