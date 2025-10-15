@@ -146,7 +146,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
 
     mostrarNotificacion("Registro exitoso. Redirigiendo a login...", "exito");
     setTimeout(() => {
-      window.location.href = "login.html";
+      window.location.href = "/Font/login.html";
     }, 2000);
 
   } catch (error) {

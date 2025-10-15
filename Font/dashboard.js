@@ -1,9 +1,17 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  // FORZAR RECARGA SI SE VUELVE CON EL BOTÓN "ATRÁS" DESPUÉS DE CERRAR SESIÓN
+  // Esto previene que el navegador muestre una versión en caché de la página.
+  window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+      window.location.reload();
+    }
+  });
+
   try {
     const res = await fetch('/me', { credentials: 'same-origin' });
     if (!res.ok) {
       // no autenticado -> redirigir al login
-      window.location.href = '/login.html';
+      window.location.href = '/Font/login.html';
       return;
     }
     const payload = await res.json();
@@ -99,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     btnLogout.addEventListener('click', async () => {
       await fetch('/logout', { method: 'POST' });
-      window.location.href = '/login.html';
+      window.location.href = '/'; // Redirigir a la página de inicio (index.html)
     });
 
     btnHome.addEventListener('click', () => {
@@ -108,6 +116,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   } catch (err) {
     console.error('Error al cargar datos de usuario:', err);
-    window.location.href = '/login.html';
+    window.location.href = '/Font/login.html';
   }
 });

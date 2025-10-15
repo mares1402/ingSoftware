@@ -31,7 +31,7 @@ function isAuthenticated(req, res, next) {
     return res.status(401).json({ mensaje: 'No autenticado' });
   }
   // Peticiones normales redirigen al login
-  return res.redirect('/login.html');
+  return res.redirect('/');
 }
 function isAdmin(req, res, next) {
   if (req.session && req.session.user && Number(req.session.user.tipo_usuario) === 2) {
@@ -47,6 +47,11 @@ function isAdmin(req, res, next) {
 app.get('/dashboard', isAuthenticated, (req, res, next) => {
   const dashboardPath = path.join(__dirname, 'Private', 'dashboard.html');
   
+  // Añadir cabeceras para prevenir el caché en el navegador
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   fs.readFile(dashboardPath, 'utf8', (err, html) => {
     if (err) return next(err);
 
