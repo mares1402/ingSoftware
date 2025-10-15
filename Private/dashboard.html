@@ -5,8 +5,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dashboard - Mount</title>
-  <script src="/dashboard.js" defer></script>
-  <link rel="stylesheet" href="/dashboard.css" />
+  <script src="/Font/dashboard.js" defer></script>
+  <link rel="stylesheet" href="/Font/dashboard.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 </head>
 
@@ -41,9 +41,9 @@
         <hr style="margin:12px 0">
         <h4>Panel de Administración</h4>
         <div class="admin-actions">
-          <button type="button" class="btn-admin" id="btnAdminUsers"><i class="fa-solid fa-users"></i> Usuarios</button>
-          <button type="button" class="btn-admin" id="btnAdminProducts"><i class="fa-solid fa-box-archive"></i> Productos</button>
-          <button type="button" class="btn-admin" id="btnAdminSuppliers"><i class="fa-solid fa-dolly"></i> Proveedores</button>
+          <button type="button" class="btn-admin" data-template="template-admin-users" data-panel-title="Gestión de Usuarios"><i class="fa-solid fa-users"></i> Usuarios</button>
+          <button type="button" class="btn-admin" data-template="template-admin-products" data-panel-title="Gestión de Productos"><i class="fa-solid fa-box-archive"></i> Productos</button>
+          <button type="button" class="btn-admin" data-template="template-admin-suppliers" data-panel-title="Gestión de Proveedores"><i class="fa-solid fa-dolly"></i> Proveedores</button>
         </div>
       </div>
 

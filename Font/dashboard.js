@@ -57,23 +57,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       const closeModalBtn = document.getElementById('closeModalBtn');
       const modalOverlay = document.getElementById('modalOverlay');
 
-      const openModal = async (panelName, title) => {
+      const openModal = (templateId, title) => {
         modal.hidden = false;
         document.body.style.overflow = 'hidden'; // Evita scroll de fondo
         modalTitle.textContent = title;
-        modalBody.innerHTML = '<p>Cargando...</p>';
 
-        try {
-          const response = await fetch(`/admin/partials/${panelName}.html`);
-          // Verificar si la petición fue exitosa (ej. no fue un 404)
-          if (!response.ok) {
-            throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
-          }
-
-          modalBody.innerHTML = await response.text();
-        } catch (error) {
-          modalBody.innerHTML = '<p>Error al cargar el contenido.</p>';
-          console.error('Error fetching partial:', error);
+        const template = document.getElementById(templateId);
+        if (template) {
+          modalBody.innerHTML = template.innerHTML;
+        } else {
+          modalBody.innerHTML = '<p>Error: No se encontró la plantilla del panel.</p>';
+          console.error(`No se encontró el template con id: ${templateId}`);
         }
       };
 
@@ -87,13 +81,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       adminButtons.forEach(button => {
         button.addEventListener('click', () => {
-          const panelMap = {
-            btnAdminUsers: { file: 'admin-users', title: 'Gestión de Usuarios' },
-            btnAdminProducts: { file: 'admin-products', title: 'Gestión de Productos' },
-            btnAdminSuppliers: { file: 'admin-suppliers', title: 'Gestión de Proveedores' }
-          };
-          const panelInfo = panelMap[button.id];
-          if (panelInfo) openModal(panelInfo.file, panelInfo.title);
+          const templateId = button.dataset.template;
+          const panelTitle = button.dataset.panelTitle;
+          if (templateId && panelTitle) {
+            openModal(templateId, panelTitle);
+          }
         });
       });
     } else {

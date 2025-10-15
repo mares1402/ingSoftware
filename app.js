@@ -4,6 +4,7 @@ const session = require('express-session');
 const app = express();
 const conexion = require('./Back/conexion');
 const authRoutes = require('./Back/aut-controller');
+const fs = require('fs'); // <-- Añadimos el módulo de archivos
 
 
 app.use(express.json());
@@ -43,19 +44,34 @@ function isAdmin(req, res, next) {
 }
 
 // Servir dashboard protegido
-app.get('/dashboard', isAuthenticated, (req, res) => {
-  res.sendFile(path.join(__dirname, 'Private', 'dashboard.html'));
+app.get('/dashboard', isAuthenticated, (req, res, next) => {
+  const dashboardPath = path.join(__dirname, 'Private', 'dashboard.html');
+  
+  fs.readFile(dashboardPath, 'utf8', (err, html) => {
+    if (err) return next(err);
+
+    // Si el usuario es admin, inyectamos los paneles
+    if (Number(req.session.user.tipo_usuario) === 2) {
+      const userPanel = fs.readFileSync(path.join(__dirname, 'Private', 'admin-users.html'), 'utf8');
+      const productPanel = fs.readFileSync(path.join(__dirname, 'Private', 'admin-products.html'), 'utf8');
+      const supplierPanel = fs.readFileSync(path.join(__dirname, 'Private', 'admin-suppliers.html'), 'utf8');
+
+      const templates = `
+        <div id="template-admin-users" style="display: none;">${userPanel}</div>
+        <div id="template-admin-products" style="display: none;">${productPanel}</div>
+        <div id="template-admin-suppliers" style="display: none;">${supplierPanel}</div>
+      `;
+      
+      html = html.replace('</body>', `${templates}</body>`);
+    }
+    
+    res.send(html);
+  });
 });
 
 // Si quieres una ruta admin aparte
 app.get('/admin', isAuthenticated, isAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'Private', 'dashboard.html'));
-});
-
-// Endpoint para servir parciales HTML de admin (protegido)
-app.get('/admin/partials/:file', isAuthenticated, isAdmin, (req, res) => {
-  const { file } = req.params;
-  res.sendFile(path.join(__dirname, 'Private', file));
 });
 
 // Endpoint para que el frontend consulte el usuario actual
@@ -82,8 +98,9 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Servir archivos estáticos de la carpeta 'Font' (CSS, JS, etc.)
-app.use(express.static(path.join(__dirname, 'Font')));
+// Servir archivos estáticos de la carpeta 'Font' bajo el prefijo /Font
+// Esto evita conflictos con otras rutas como /admin/partials
+app.use('/Font', express.static(path.join(__dirname, 'Font')));
 
 app.listen(3000, () => {
     console.log('Servidor escuchando en puerto 3000');
