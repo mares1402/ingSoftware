@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const adminArea = document.getElementById('adminArea');
     const btnLogout = document.getElementById('btnLogout');
     const btnEdit = document.getElementById('btnEdit');
+    const btnHome = document.getElementById('btnHome');
 
     const initials = (nombre[0] || '').toUpperCase() + (paterno[0] || '').toUpperCase();
     avatar.textContent = initials || 'U';
@@ -47,6 +48,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (esAdmin) {
       adminArea.style.display = 'block';
       adminArea.setAttribute('aria-hidden', 'false');
+
+      // --- Lógica para el Modal de Administración ---
+      const adminButtons = document.querySelectorAll('.btn-admin');
+      const modal = document.getElementById('adminModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      const closeModalBtn = document.getElementById('closeModalBtn');
+      const modalOverlay = document.getElementById('modalOverlay');
+
+      const openModal = async (panelName, title) => {
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden'; // Evita scroll de fondo
+        modalTitle.textContent = title;
+        modalBody.innerHTML = '<p>Cargando...</p>';
+
+        try {
+          const response = await fetch(`/admin/partials/${panelName}.html`);
+          // Verificar si la petición fue exitosa (ej. no fue un 404)
+          if (!response.ok) {
+            throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+          }
+
+          modalBody.innerHTML = await response.text();
+        } catch (error) {
+          modalBody.innerHTML = '<p>Error al cargar el contenido.</p>';
+          console.error('Error fetching partial:', error);
+        }
+      };
+
+      const closeModal = () => {
+        modal.hidden = true;
+        document.body.style.overflow = ''; // Restaura scroll
+      };
+
+      closeModalBtn.addEventListener('click', closeModal);
+      modalOverlay.addEventListener('click', closeModal);
+
+      adminButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const panelMap = {
+            btnAdminUsers: { file: 'admin-users', title: 'Gestión de Usuarios' },
+            btnAdminProducts: { file: 'admin-products', title: 'Gestión de Productos' },
+            btnAdminSuppliers: { file: 'admin-suppliers', title: 'Gestión de Proveedores' }
+          };
+          const panelInfo = panelMap[button.id];
+          if (panelInfo) openModal(panelInfo.file, panelInfo.title);
+        });
+      });
     } else {
       adminArea.style.display = 'none';
       adminArea.setAttribute('aria-hidden', 'true');
@@ -59,6 +108,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnLogout.addEventListener('click', async () => {
       await fetch('/logout', { method: 'POST' });
       window.location.href = '/login.html';
+    });
+
+    btnHome.addEventListener('click', () => {
+      window.location.href = '/';
     });
 
   } catch (err) {

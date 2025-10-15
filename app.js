@@ -52,6 +52,12 @@ app.get('/admin', isAuthenticated, isAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'Private', 'dashboard.html'));
 });
 
+// Endpoint para servir parciales HTML de admin (protegido)
+app.get('/admin/partials/:file', isAuthenticated, isAdmin, (req, res) => {
+  const { file } = req.params;
+  res.sendFile(path.join(__dirname, 'Private', file));
+});
+
 // Endpoint para que el frontend consulte el usuario actual
 app.get('/me', isAuthenticated, (req, res) => {
   res.json({ user: req.session.user });
@@ -69,18 +75,15 @@ app.post('/logout', (req, res) => {
   });
 });
 
-app.use(express.static(__dirname + '/Font'));
-app.use(express.static(__dirname));
-
 // Rutas públicas de autenticación (login / signup)
 app.use('/', authRoutes);
-
-// Assets públicos (css, js, imgs)
-app.use(express.static(path.join(__dirname, 'Font')));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+// Servir archivos estáticos de la carpeta 'Font' (CSS, JS, etc.)
+app.use(express.static(path.join(__dirname, 'Font')));
 
 app.listen(3000, () => {
     console.log('Servidor escuchando en puerto 3000');

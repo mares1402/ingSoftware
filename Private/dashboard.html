@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dashboard - Mount</title>
   <script src="/dashboard.js" defer></script>
-  <link rel="stylesheet" href="dashboard.css" />
+  <link rel="stylesheet" href="/dashboard.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 </head>
 
 <body>
@@ -31,19 +32,37 @@
       <p id="infoText" style="color:#444">Cargando...</p>
 
       <div class="actions">
-        <a href="/" class="btn-home" role="button">Regresar al inicio</a>
-        <button type="button" class="btn-edit" id="btnEdit" aria-controls="profileForm">Editar perfil</button>
-        <button type="button" class="btn-logout" id="btnLogout">Cerrar sesión</button>
+        <button type="button" class="btn-home" id="btnHome"><i class="fa-solid fa-house"></i> Inicio</button>
+        <button type="button" class="btn-edit" id="btnEdit" aria-controls="profileForm"><i class="fa-solid fa-user-pen"></i> Editar perfil</button>
+        <button type="button" class="btn-logout" id="btnLogout"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button>
       </div>
 
       <div id="adminArea" style="margin-top:18px; display:none;" aria-hidden="true">
         <hr style="margin:12px 0">
-        <h4>Área de administrador</h4>
-        <p style="color:#333">Funciones de administración aparecerán aquí.</p>
+        <h4>Panel de Administración</h4>
+        <div class="admin-actions">
+          <button type="button" class="btn-admin" id="btnAdminUsers"><i class="fa-solid fa-users"></i> Usuarios</button>
+          <button type="button" class="btn-admin" id="btnAdminProducts"><i class="fa-solid fa-box-archive"></i> Productos</button>
+          <button type="button" class="btn-admin" id="btnAdminSuppliers"><i class="fa-solid fa-dolly"></i> Proveedores</button>
+        </div>
       </div>
+
     </section>
   </main>
 
+  <!-- Estructura del Modal de Administración -->
+  <div id="adminModal" class="modal" hidden>
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h2 id="modalTitle">Panel de Administración</h2>
+        <button id="closeModalBtn" class="modal-close-btn" aria-label="Cerrar">&times;</button>
+      </div>
+      <div id="modalBody" class="modal-body">
+        <p>Cargando...</p>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>
