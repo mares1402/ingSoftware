@@ -5,8 +5,7 @@ const app = express();
 const conexion = require('./Back/conexion');
 const authRoutes = require('./Back/aut-controller');
 const fs = require('fs'); // <-- Añadimos el módulo de archivos
-
-
+const adminRoutes = require('./Back/admin-routes');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -43,6 +42,7 @@ function isAdmin(req, res, next) {
   return res.status(403).send('Acceso denegado');
 }
 
+app.use('/api/admin', adminRoutes);
 // Servir dashboard protegido
 app.get('/dashboard', isAuthenticated, (req, res, next) => {
   const dashboardPath = path.join(__dirname, 'Private', 'dashboard.html');

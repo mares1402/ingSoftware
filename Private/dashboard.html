@@ -41,14 +41,22 @@
         <hr style="margin:12px 0">
         <h4>Panel de Administración</h4>
         <div class="admin-actions">
-          <button type="button" class="btn-admin" data-template="template-admin-users" data-panel-title="Gestión de Usuarios"><i class="fa-solid fa-users"></i> Usuarios</button>
-          <button type="button" class="btn-admin" data-template="template-admin-products" data-panel-title="Gestión de Productos"><i class="fa-solid fa-box-archive"></i> Productos</button>
-          <button type="button" class="btn-admin" data-template="template-admin-suppliers" data-panel-title="Gestión de Proveedores"><i class="fa-solid fa-dolly"></i> Proveedores</button>
-        </div>
-      </div>
+        <button type="button" class="btn-admin" data-file="admin-users.html" data-panel-title="Gestión de Usuarios">
+          <i class="fa-solid fa-users"></i> Usuarios
+        </button>
 
-    </section>
-  </main>
+        <button type="button" class="btn-admin" data-file="admin-products.html" data-panel-title="Gestión de Productos">
+          <i class="fa-solid fa-box-archive"></i> Productos
+        </button>
+
+        <button type="button" class="btn-admin" data-file="admin-suppliers.html" data-panel-title="Gestión de Proveedores">
+          <i class="fa-solid fa-dolly"></i> Proveedores
+        </button>
+      </div>
+    </div>
+
+  </section>
+</main>
 
   <!-- Estructura del Modal de Administración -->
   <div id="adminModal" class="modal" hidden>
