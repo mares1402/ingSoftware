@@ -42,41 +42,30 @@ function isAdmin(req, res, next) {
   return res.status(403).send('Acceso denegado');
 }
 
-app.use('/api/admin', adminRoutes);
 // Servir dashboard protegido
 app.get('/dashboard', isAuthenticated, (req, res, next) => {
   const dashboardPath = path.join(__dirname, 'Private', 'dashboard.html');
-  
   // Añadir cabeceras para prevenir el caché en el navegador
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-
-  fs.readFile(dashboardPath, 'utf8', (err, html) => {
-    if (err) return next(err);
-
-    // Si el usuario es admin, inyectamos los paneles
-    if (Number(req.session.user.tipo_usuario) === 2) {
-      const userPanel = fs.readFileSync(path.join(__dirname, 'Private', 'admin-users.html'), 'utf8');
-      const productPanel = fs.readFileSync(path.join(__dirname, 'Private', 'admin-products.html'), 'utf8');
-      const supplierPanel = fs.readFileSync(path.join(__dirname, 'Private', 'admin-suppliers.html'), 'utf8');
-
-      const templates = `
-        <div id="template-admin-users" style="display: none;">${userPanel}</div>
-        <div id="template-admin-products" style="display: none;">${productPanel}</div>
-        <div id="template-admin-suppliers" style="display: none;">${supplierPanel}</div>
-      `;
-      
-      html = html.replace('</body>', `${templates}</body>`);
-    }
-    
-    res.send(html);
-  });
+  res.sendFile(dashboardPath);
 });
 
-// Si quieres una ruta admin aparte
-app.get('/admin', isAuthenticated, isAdmin, (req, res) => {
-  res.sendFile(path.join(__dirname, 'Private', 'dashboard.html'));
+// Nueva ruta para servir los paneles de admin
+app.get('/api/admin/panel/:panelName', isAuthenticated, (req, res) => {
+  const panelName = req.params.panelName;
+  // Solo los admins pueden acceder a los paneles de admin
+  if (panelName.startsWith('admin-') && Number(req.session.user.tipo_usuario) !== 2) {
+    return res.status(403).send('Acceso denegado');
+  }
+  const panelPath = path.join(__dirname, 'Private', panelName);
+
+  if (fs.existsSync(panelPath)) {
+    res.sendFile(panelPath);
+  } else {
+    res.status(404).send('Panel no encontrado');
+  }
 });
 
 // Endpoint para que el frontend consulte el usuario actual
@@ -95,6 +84,9 @@ app.post('/logout', (req, res) => {
     res.json({ mensaje: 'Logout exitoso' });
   });
 });
+
+// Rutas de la API de Admin (para datos)
+app.use('/api/admin', isAdmin, adminRoutes);
 
 // Rutas públicas de autenticación (login / signup)
 app.use('/', authRoutes);

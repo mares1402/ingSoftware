@@ -22,93 +22,104 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('userFullName').textContent = `${nombre} ${paterno} ${materno}`.trim() || 'Usuario';
     document.getElementById('userEmail').textContent = correo;
 
-    // --- Lógica del Dashboard ---
-    const userContent = document.getElementById('user-content');
-    const adminControls = document.getElementById('admin-controls');
-    const adminActions = document.querySelector('.admin-actions');
-    const adminContentArea = document.getElementById('admin-content-area');
-    const modalContainer = document.getElementById('modal-container');
+    const contentArea = document.getElementById('content-area');
+    const navContainer = document.querySelector('.dashboard-nav');
 
-    // Contenido para usuario normal
-    let generoHTML = `<strong>Género:</strong> `;
-    if (genero === 'Masculino') generoHTML += `<span style="color:#007bff">Masculino ♂️</span>`;
-    else if (genero === 'Femenino') generoHTML += `<span style="color:#e83e8c">Femenino ♀️</span>`;
-    else generoHTML += `<span style="color:#6f42c1">${genero} ⚧️</span>`;
+    // Función para mostrar una sección
+    const showSection = async (section, linkElement) => {
+      document.querySelectorAll('.nav-link.active').forEach(link => link.classList.remove('active'));
+      if (linkElement) linkElement.classList.add('active');
 
-    userContent.innerHTML = `<p>${generoHTML}</p>`;
+      if (section === 'info.html') {
+        // Caso especial: Generar la tarjeta de información del usuario dinámicamente
+        let generoDisplay;
+        if (genero === 'Masculino') generoDisplay = `<span class="gender-male">Masculino ♂️</span>`;
+        else if (genero === 'Femenino') generoDisplay = `<span class="gender-female">Femenino ♀️</span>`;
+        else generoDisplay = `<span class="gender-other">${genero} ⚧️</span>`;
 
-    // Función para mostrar un panel de admin
-    const showAdminPanel = async (panelName, button) => {
-      document.querySelectorAll('.btn-admin.active').forEach(btn => btn.classList.remove('active'));
-      if (button) button.classList.add('active');
-      
-      adminContentArea.innerHTML = '<p>Cargando...</p>';
-      try {
-        const resp = await fetch(`/api/admin/panel/${panelName}`, { credentials: 'same-origin' });
-        if (!resp.ok) throw new Error(`No se pudo cargar el panel ${panelName}`);
-        adminContentArea.innerHTML = `<div class="admin-panel">${await resp.text()}</div>`;
-        
-        // Cargar datos y modales correspondientes
-        if (panelName === 'admin-users.html') {
-          await loadModal('modal-editar-usuario.html');
-          loadUsuarios();
+        contentArea.innerHTML = `
+          <div class="info-card">
+            <h2 class="info-card-title">Tu Información</h2>
+            <div class="info-card-grid">
+              <div class="info-item"><span class="info-label">Género:</span> ${generoDisplay}</div>
+              <div class="info-item"><span class="info-label">Tipo de Usuario:</span> <span class="info-value">${esAdmin ? 'Administrador' : 'Cliente'} ${esAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span></div>
+            </div>
+          </div>
+        `;
+      } else {
+        // Cargar paneles de admin desde el servidor
+        contentArea.innerHTML = '<p>Cargando...</p>';
+        try {
+          const resp = await fetch(`/api/admin/panel/${section}`, { credentials: 'same-origin' });
+          if (!resp.ok) throw new Error(`No se pudo cargar el panel ${section}`);
+          const panelHtml = await resp.text();
+          contentArea.innerHTML = `<div class="admin-panel-card">${panelHtml}</div>`;
+
+          // Cargar datos después de inyectar el HTML
+          if (section === 'admin-users.html') {
+            // Ocultar el botón de "Añadir Nuevo" que no se usa en este panel
+            const addUserBtn = contentArea.querySelector('.btn-add-new');
+            if (addUserBtn) addUserBtn.style.display = 'none';
+            loadUsuarios();
+          }
+          if (section === 'admin-products.html') loadProductos();
+          if (section === 'admin-suppliers.html') loadProveedores();
+        } catch (err) {
+          contentArea.innerHTML = `<p>Error cargando el panel: ${err.message}</p>`;
+          console.error(err);
         }
-        if (panelName === 'admin-products.html') {
-          await loadModal('modal-editar-producto.html');
-          loadProductos();
-        }
-        if (panelName === 'admin-suppliers.html') {
-          await loadModal('modal-editar-proveedor.html');
-          await loadModal('modal-agregar-proveedor.html');
-          loadProveedores();
-        }
-      } catch (err) {
-        adminContentArea.innerHTML = `<p>Error cargando el panel: ${err.message}</p>`;
-        console.error(err);
       }
     };
 
-    // Función para cargar un modal HTML en el contenedor
+    // Construir navegación
+    let navHTML = '<ul><li><a href="#" class="nav-link" data-section="info.html"><i class="fa-solid fa-circle-info"></i> Tu Información</a></li></ul>';
+    if (esAdmin) {
+      navHTML += `
+        <hr>
+        <h4 class="nav-title">Administración</h4>
+        <ul>
+          <li><a href="#" class="nav-link" data-section="admin-users.html"><i class="fa-solid fa-users"></i> Usuarios</a></li>
+          <li><a href="#" class="nav-link" data-section="admin-products.html"><i class="fa-solid fa-box-archive"></i> Productos</a></li>
+          <li><a href="#" class="nav-link" data-section="admin-suppliers.html"><i class="fa-solid fa-dolly"></i> Proveedores</a></li>
+        </ul>
+      `;
+    }
+    navContainer.innerHTML = navHTML;
+
+    // Asignar eventos a los nuevos links
+    navContainer.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSection(link.dataset.section, link);
+      });
+    });
+
+    // Cargar sección por defecto
+    const defaultSectionLink = navContainer.querySelector('.nav-link');
+    if (defaultSectionLink) {
+      showSection(defaultSectionLink.dataset.section, defaultSectionLink);
+    }
+
+    // Función para cargar un modal HTML (si es necesario en el futuro)
     const loadModal = async (modalFile) => {
+      // Evita cargar el mismo modal dos veces
+      const modalId = modalFile.replace('.html', '');
+      if (document.getElementById(modalId)) return;
+
       const resp = await fetch(`/api/admin/panel/${modalFile}`, { credentials: 'same-origin' });
       if (resp.ok) {
         const modalHtml = await resp.text();
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = modalHtml;
-        const modalElement = tempDiv.firstChild;
-        if (modalElement && !document.getElementById(modalElement.id)) {
-          modalContainer.appendChild(modalElement);
-          // Añadir listeners para cerrar el modal
-          modalElement.querySelector('.modal-close-btn, .modal-overlay')?.addEventListener('click', () => {
-            modalElement.style.display = 'none';
-          });
-        }
+        document.body.insertAdjacentHTML('beforeend', modalHtml); // Añade el modal al final del body
+        const modalElement = document.getElementById(modalId);
+        // Añadir listeners para cerrar el modal
+        modalElement.querySelector('.modal-close-btn, .modal-overlay')?.addEventListener('click', () => {
+          modalElement.style.display = 'none';
+        });
       }
     };
 
-    if (esAdmin) {
-      adminControls.style.display = 'block';
-      userContent.innerHTML += `<p><strong>Tipo:</strong> Administrador <span class="admin-badge">ADMIN</span></p>`;
-
-      const adminPanels = [
-        { file: 'admin-users.html', title: 'Usuarios', icon: 'fa-users' },
-        { file: 'admin-products.html', title: 'Productos', icon: 'fa-box-archive' },
-        { file: 'admin-suppliers.html', title: 'Proveedores', icon: 'fa-dolly' }
-      ];
-
-      adminPanels.forEach(panel => {
-        const button = document.createElement('button');
-        button.className = 'btn-admin';
-        button.innerHTML = `<i class="fa-solid ${panel.icon}"></i> ${panel.title}`;
-        button.onclick = () => showAdminPanel(panel.file, button);
-        adminActions.appendChild(button);
-      });
-
-      // Mostrar el primer panel por defecto
-      if (adminActions.firstChild) adminActions.firstChild.click();
-    }
-
     async function cargarCategoriasSelect() {
+      // Esta función parece específica para productos, la dejamos como está.
       const resp = await fetch('/api/admin/categorias');
       const categorias = await resp.json();
       const select = document.getElementById('edit-producto-categoria');
@@ -124,6 +135,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Función para cargar usuarios ---
     async function loadUsuarios() {
       try {
+        // Cargar el HTML del modal de edición de usuario
+        await loadModal('modal-editar-usuario.html');
+
         const res = await fetch('/api/admin/usuarios', { credentials: 'same-origin' });
         if (!res.ok) throw new Error('No se pudieron obtener los usuarios');
         const usuarios = await res.json();
@@ -299,32 +313,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!res.ok) throw new Error('Usuario no encontrado');
         const u = await res.json();
 
-        const modal = document.getElementById('modal-editar');
+        const modal = document.getElementById('modal-editar-usuario');
         modal.style.display = 'flex';
 
-        document.getElementById('edit-id').value = u.id_usuario;
-        document.getElementById('edit-nombre').value = u.nombre;
-        document.getElementById('edit-paterno').value = u.paterno;
-        document.getElementById('edit-materno').value = u.materno || '';
-        document.getElementById('edit-correo').value = u.correo;
-        document.getElementById('edit-telefono').value = u.telefono || '';
-        document.getElementById('edit-genero').value = u.genero || 'M';
-        document.getElementById('edit-tipo').value = u.tipo_usuario;
+        document.getElementById('edit-usuario-id').value = u.id_usuario;
+        document.getElementById('edit-usuario-nombre').value = u.nombre;
+        document.getElementById('edit-usuario-paterno').value = u.paterno;
+        document.getElementById('edit-usuario-materno').value = u.materno || '';
+        document.getElementById('edit-usuario-correo').value = u.correo;
+        document.getElementById('edit-usuario-telefono').value = u.telefono || '';
+        document.getElementById('edit-usuario-genero').value = u.genero || 'Masculino';
+        document.getElementById('edit-usuario-tipo').value = u.tipo_usuario;
 
         // --- Listener correcto, solo uno ---
-        const form = document.getElementById('form-editar');
+        const form = document.getElementById('form-editar-usuario');
         form.onsubmit = async e => {
           e.preventDefault();
 
           const id = document.getElementById('edit-id').value;
           const data = {
-            nombre: document.getElementById('edit-nombre').value,
-            paterno: document.getElementById('edit-paterno').value,
-            materno: document.getElementById('edit-materno').value,
-            correo: document.getElementById('edit-correo').value,
-            telefono: document.getElementById('edit-telefono').value,
-            genero: document.getElementById('edit-genero').value,
-            tipo_usuario: Number(document.getElementById('edit-tipo').value)
+            nombre: document.getElementById('edit-usuario-nombre').value,
+            paterno: document.getElementById('edit-usuario-paterno').value,
+            materno: document.getElementById('edit-usuario-materno').value,
+            correo: document.getElementById('edit-usuario-correo').value,
+            telefono: document.getElementById('edit-usuario-telefono').value,
+            genero: document.getElementById('edit-usuario-genero').value,
+            tipo_usuario: Number(document.getElementById('edit-usuario-tipo').value)
           };
 
           console.log("Datos a enviar al backend:", data);
@@ -523,10 +537,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Asignar la función de logout a ambos botones
     document.getElementById('btnLogout').addEventListener('click', logoutFunction);
+    const mainLogoutBtn = document.getElementById('mainLogoutBtn'); 
+    if (mainLogoutBtn) mainLogoutBtn.addEventListener('click', logoutFunction);
 
-    document.getElementById('btnHome').addEventListener('click', () => {
-      window.location.href = '/';
-    });
+    document.getElementById('btnHome').addEventListener('click', () => window.location.href = '/');
 
   } catch (err) {
     console.error('Error al cargar datos de usuario:', err);

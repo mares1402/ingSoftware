@@ -1,0 +1,50 @@
+<!-- Modal para Editar Usuario -->
+<div id="modal-editar-usuario" class="modal" style="display: none;">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Editar Usuario</h2>
+      <button class="modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-editar-usuario">
+        <input type="hidden" id="edit-usuario-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="edit-usuario-nombre">Nombre</label>
+            <input type="text" id="edit-usuario-nombre" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-usuario-paterno">Apellido Paterno</label>
+            <input type="text" id="edit-usuario-paterno" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-usuario-materno">Apellido Materno</label>
+            <input type="text" id="edit-usuario-materno">
+          </div>
+          <div class="form-group">
+            <label for="edit-usuario-correo">Correo</label>
+            <input type="email" id="edit-usuario-correo" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-usuario-telefono">Teléfono</label>
+            <input type="tel" id="edit-usuario-telefono">
+          </div>
+          <div class="form-group">
+            <label for="edit-usuario-genero">Género</label>
+            <select id="edit-usuario-genero">
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-usuario-tipo">Tipo de Usuario</label>
+            <select id="edit-usuario-tipo"><option value="1">Cliente</option><option value="2">Administrador</option></select>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit">Guardar Cambios</button>
+      </form>
+    </div>
+  </div>
+</div>

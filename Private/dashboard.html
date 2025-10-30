@@ -1,76 +1,65 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Dashboard - Mount</title>
   <script src="/Font/dashboard.js" defer></script>
   <link rel="stylesheet" href="/Font/dashboard.css" />
+  <link rel="stylesheet" href="/Font/index.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 </head>
-
 <body>
-  <main class="card" role="main" aria-labelledby="panelTitle">
-    <header>
-      <div>
-        <h1 id="panelTitle">Panel de usuario</h1>
-        <div style="color:var(--muted); font-size:13px;">Bienvenido a la plataforma de cotizaciones — Mount</div>
-      </div>
-
-      <div class="user-info" aria-live="polite">
-        <div id="avatar" class="avatar" role="img" aria-label="Avatar del usuario">U</div>
-        <div class="meta">
-          <div id="userFullName" style="font-weight:700">Usuario</div>
-          <p id="userEmail" aria-hidden="false"></p>
-        </div>
-      </div>
-    </header>
-
-    <section aria-labelledby="infoHeading">
-      <h3 id="infoHeading">Tu información</h3>
-      <p id="infoText" style="color:#444">Cargando...</p>
-
-      <div class="actions">
-        <button type="button" class="btn-home" id="btnHome"><i class="fa-solid fa-house"></i> Inicio</button>
-        <button type="button" class="btn-edit" id="btnEdit" aria-controls="profileForm"><i class="fa-solid fa-user-pen"></i> Editar perfil</button>
-        <button type="button" class="btn-logout" id="btnLogout"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button>
-      </div>
-
-      <div id="adminArea" style="margin-top:18px; display:none;" aria-hidden="true">
-        <hr style="margin:12px 0">
-        <h4>Panel de Administración</h4>
-        <div class="admin-actions">
-        <button type="button" class="btn-admin" data-file="admin-users.html" data-panel-title="Gestión de Usuarios">
-          <i class="fa-solid fa-users"></i> Usuarios
-        </button>
-
-        <button type="button" class="btn-admin" data-file="admin-products.html" data-panel-title="Gestión de Productos">
-          <i class="fa-solid fa-box-archive"></i> Productos
-        </button>
-
-        <button type="button" class="btn-admin" data-file="admin-suppliers.html" data-panel-title="Gestión de Proveedores">
-          <i class="fa-solid fa-dolly"></i> Proveedores
-        </button>
-      </div>
-    </div>
-
-  </section>
-</main>
-
-  <!-- Estructura del Modal de Administración -->
-  <div id="adminModal" class="modal" hidden>
-    <div class="modal-overlay" id="modalOverlay"></div>
-    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-header">
-        <h2 id="modalTitle">Panel de Administración</h2>
-        <button id="closeModalBtn" class="modal-close-btn" aria-label="Cerrar">&times;</button>
-      </div>
-      <div id="modalBody" class="modal-body">
-        <p>Cargando...</p>
-      </div>
+  <div class="top-bar">
+    <div class="social-links">
+      <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+      <a href="#" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+      <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
     </div>
   </div>
-</body>
+  <header class="main-header">
+    <a href="/" class="logo">
+      <img src="/Font/imgs/mount logo.jpg" alt="Logo de Ferretería CNC">
+    </a>
+    <div class="header-content">
+      <nav class="main-nav">
+        <ul>
+          <li><a href="#">FRESAS</a></li>
+          <li><a href="#">MOTORES</a></li>
+          <li><a href="#">MECÁNICA</a></li>
+          <li><a href="#">ELECTRÓNICA</a></li>
+          <li><a href="#">HERRAMIENTAS</a></li>
+        </ul>
+      </nav>
+      <div class="user-actions">
+        <a href="#" id="mainLogoutBtn" class="login-link"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</a>
+      </div>
+    </div>
+  </header>
 
+  <div class="dashboard-container">
+    <main class="card" role="main" style="padding: 0; overflow: hidden;">
+      <header class="profile-header">
+        <div class="profile-banner"></div>
+        <div class="profile-details">
+          <div id="avatar" class="avatar" role="img" aria-label="Avatar del usuario">U</div>
+          <div class="profile-meta">
+            <div id="userFullName" style="font-weight:700">Usuario</div>
+            <p id="userEmail" aria-hidden="false"></p>
+          </div>
+          <div class="profile-actions">
+            <button type="button" class="btn-edit" id="btnEdit"><i class="fa-solid fa-user-pen"></i> Editar perfil</button>
+            <button type="button" class="btn-home" id="btnHome"><i class="fa-solid fa-house"></i> Inicio</button>
+            <button type="button" class="btn-logout" id="btnLogout"><i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="dashboard-body">
+        <nav class="dashboard-nav"></nav>
+        <div id="content-area" class="dashboard-content"></div>
+      </div>
+    </main>
+  </div>
+</body>
 </html>

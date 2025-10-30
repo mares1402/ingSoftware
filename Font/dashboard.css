@@ -1,239 +1,425 @@
-    :root{
-      --bg:#de7002;
-      --card:#ffffff;
-      --text:#222;
-      --accent:#2d7cff;
-      --danger:#ff5c5c;
-      --badge:#ffdf5a;
-      --dark: #343a40;
-    }
-    html,body { height:100%; }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      background:var(--bg);
-      margin:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:var(--text);
-    }
-    .card {
-      background:var(--card);
-      width:100%;
-      max-width:800px;
-      padding:24px;
-      border-radius:12px;
-      box-shadow:0 6px 20px rgba(20,20,50,0.08);
-    }
-    header {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:18px;
-      gap:16px;
-      flex-wrap:wrap;
-    }
-    h1 { margin:0; font-size:20px; }
-    .user-info { display:flex; gap:12px; align-items:center; }
-    .avatar {
-      width:64px;
-      height:64px;
-      border-radius:50%;
-      background:linear-gradient(135deg,#9fc5ff,#6b8cff);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:white;
-      font-weight:700;
-      font-size:20px;
-      flex:0 0 64px;
-    }
-    .meta { color:var(--text); }
-    .meta p { margin:6px 0; font-size:13px; color:#777; }
-    section > h3 { margin-top:0; }
-    .actions { margin-top:18px; display:flex; gap:12px; flex-wrap:wrap; }
-    
-    
-    /* Estilos para los botones de acción */
-    .btn-logout, .btn-edit, .btn-home, .btn-admin {
-      padding:10px 14px;
-      border-radius:8px;
-      border:0;
-      cursor:pointer;
-      font-weight:600;
-      transition: background-color 0.2s, transform 0.2s;
-      /* Centramos el contenido (texto e iconos) */
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px; /* Espacio entre icono y texto */
-    }
+:root{
+  --bg:#de7002;
+  --muted: #6c757d;
+  --card:#ffffff;
+  --text:#222;
+  --accent:#2d7cff;
+  --danger:#ff5c5c;
+  --badge:#ffdf5a;
+  --dark: #343a40;
+}
 
-    .btn-admin:hover {
-      background-color: #495057; /* Un gris más claro */
-      transform: translateY(-2px);
-    }
+body {
+  /* Se elimina el fondo y el centrado para heredar de index.css */
+  font-family: Arial, Helvetica, sans-serif;
+  margin:0;
+  color:var(--text);
+  background-color: #f4f6f9; /* Fondo neutro para el dashboard (Gris claro) */
+}
 
-    .btn-logout:hover {
-      background-color: #e04444; /* Un rojo más oscuro */
-      transform: translateY(-2px);
-    }
-    .btn-edit:hover {
-      background-color: #1a6eff; /* Un azul más oscuro */
-      transform: translateY(-2px);
-    }
-    .btn-home:hover { background-color: #555; transform: translateY(-2px); }
+/* --- Ajuste Clave para que el Recuadro Blanco Baje --- */
+/* Estimo que el top-bar y el main-header miden unos 120px en total. 
+   Ajusta este valor si ves que sigue faltando o sobrando espacio. */
+.dashboard-container {
+    min-height: calc(100vh - 120px); 
+    /* Usamos flexbox para que la tarjeta principal (.card) se estire */
+    display: flex; 
+    flex-direction: column; /* Asegura que el contenido se apile verticalmente */
+}
 
-    button:focus-visible { outline:3px solid rgba(45,124,255,0.25); outline-offset:2px; }
-    .btn-logout { background:var(--danger); color:white; }
-    .btn-edit { background:var(--accent); color:white; }
-    .admin-badge { display:inline-block; padding:6px 10px; background:var(--badge); border-radius:8px; font-weight:700; margin-left:8px; color: #333; }
-    .btn-admin { background: var(--dark); color: white; }
-    .btn-home { background: var(--accent); color: white; }
-    hr { border:0; border-top:1px solid #eee; }
-    @media (max-width:420px){
-      .avatar{width:52px;height:52px;font-size:18px}
-      .card{padding:16px;}
-    }
+.dashboard-container > .card {
+    flex-grow: 1; 
+    min-height: 100%; /* La tarjeta blanca ahora ocupa el 100% de la altura mínima del contenedor */
+}
+/* -------------------------------------------------------- */
 
-    .admin-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
+/* --- Nuevo Diseño de Perfil --- */
+.profile-header {
+  position: relative;
+  margin-bottom: 20px;
+}
+.profile-banner {
+  height: 200px;
+  background: linear-gradient(135deg, #4e54c8, #8f94fb);
+}
+.profile-details {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 24px 20px;
+  margin-top: -60px;
+  gap: 20px;
+}
+.avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9fc5ff, #6b8cff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 48px;
+  flex-shrink: 0;
+  border: 4px solid white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+.profile-meta {
+  padding-bottom: 10px;
+}
+.profile-meta div {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+.profile-meta p {
+  margin: 4px 0 0;
+  color: #555;
+}
+.profile-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  padding-bottom: 10px;
+}
 
-    .admin-content-area {
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid #eee;
-    }
+/* --- Layout del cuerpo del Dashboard --- */
+.dashboard-body {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  padding: 0 24px 24px;
+}
+.dashboard-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.dashboard-nav .nav-title {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.dashboard-nav .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s;
+  border: 1px solid transparent; /* Añadido para evitar saltos en hover */
+}
+.dashboard-nav .nav-link:hover {
+  background-color: #f0f2f5;
+  border-color: #e0e0e0; /* Borde sutil en hover */
+}
+.dashboard-nav .nav-link.active {
+  background-color: var(--accent);
+  color: white;
+}
+.dashboard-nav .nav-link i {
+  width: 20px;
+  text-align: center;
+}
 
-    .admin-panel {
-      background-color: #f9f9f9;
-      padding: 16px;
-      border-radius: 8px;
-      border: 1px solid #e9e9e9;
-    }
 
-    /* Estilo para el botón de admin que está activo */
-    .btn-admin.active {
-      background-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(45, 124, 255, 0.25);
-      transform: translateY(0);
-    }
+/* Estilos para los botones de acción */
+.btn-logout, .btn-edit, .btn-home, .btn-admin {
+  padding:10px 14px;
+  border-radius:8px;
+  border:0;
+  cursor:pointer;
+  font-weight:500;
+  transition: background-color 0.2s, transform 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-admin:hover {
+  background-color: #495057; /* Un gris más claro */
+  transform: translateY(-2px);
+}
+.btn-logout:hover {
+  background-color: #e04444; /* Un rojo más oscuro */
+  transform: translateY(-2px);
+}
+.btn-edit:hover {
+  background-color: #1a6eff; /* Un azul más oscuro */
+  transform: translateY(-2px);
+}
+.btn-home:hover { background-color: #555; transform: translateY(-2px); }
 
-    /* --- Estilos para el Modal --- */
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
+.btn-logout { background:var(--danger); color:white; }
+.btn-edit { background:var(--accent); color:white; }
+.admin-badge { display:inline-block; padding:6px 10px; background:var(--badge); border-radius:8px; font-weight:700; margin-left:8px; color: #333; }
+.btn-admin { background: var(--dark); color: white; }
+.btn-home { background: var(--accent); color: white; }
+hr { border:0; border-top:1px solid #eee; }
+@media (max-width:768px){
+  .dashboard-body { grid-template-columns: 1fr; }
+  .profile-details { flex-direction: column; align-items: center; text-align: center; gap: 1rem; margin-top: -80px;}
+  .profile-actions { margin-left: 0; }
+}
 
-    .modal[hidden] {
-      display: none;
-    }
+#adminPanelTitle {
+  font-size: 1.5rem;
+  margin: 0 0 1rem 0;
+}
+.admin-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
 
-    .modal-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.6);
-      cursor: pointer;
-    }
 
-    .modal-content {
-      position: relative;
-      background: white;
-      padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-      z-index: 1001;
-      width: 90%;
-      max-width: 700px;
-      max-height: 90vh;
-      display: flex;
-      flex-direction: column;
-    }
+.admin-panel {
+  background-color: #f9f9f9;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e9e9e9;
+}
+/* Estilo para el botón de admin que está activo */
+.btn-admin.active {
+  background-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(45, 124, 255, 0.25);
+  transform: translateY(0);
+}
 
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 12px;
-      margin-bottom: 16px;
-    }
+/* === Estilos para Modales === */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+.modal-content {
+  position: relative;
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+.modal-header h2 { margin: 0; }
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  color: #888;
+}
+.modal-body {
+  overflow-y: auto;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+.form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+.btn-submit { width: 100%; padding: 0.8rem; background-color: var(--accent); color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; margin-top: 1rem; }
 
-    .modal-header h2 { margin: 0; }
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.panel-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+.panel-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.panel-search {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-width: 200px;
+}
+.btn-add-new {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--accent);
+  color: white;
+  transition: background-color 0.2s;
+}
+.btn-add-new:hover {
+  background-color: #1a6eff;
+}
 
-    .modal-close-btn {
-      background: none;
-      border: none;
-      font-size: 28px;
-      line-height: 1;
-      cursor: pointer;
-      color: #888;
-    }
+/* === Estilos para Tablas de Admin === */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  background-color: var(--card);
+  border-radius: var(--radio-borde, 8px);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  font-size: 0.9rem;
+}
 
-    .modal-body {
-      overflow-y: auto;
-    }
+.admin-table thead tr {
+  background-color: #f8f9fa; /* Fondo gris claro del encabezado de tabla */
+  color: var(--muted);
+  text-align: left;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
-    /* --- Estilos para Paneles de Admin (dentro del modal) --- */
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
+.admin-table th,
+.admin-table td {
+  padding: 12px 15px;
+  vertical-align: middle;
+}
 
-    .panel-header h3 {
-      margin: 0;
-      font-size: 1.25rem;
-      color: var(--text);
-    }
+.admin-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+}
 
-    .panel-actions {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
+.admin-table tbody tr:last-of-type {
+  border-bottom: none;
+}
 
-    .panel-search {
-      padding: 8px 12px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      min-width: 200px;
-    }
+.admin-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
 
-    .btn-add-new {
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background-color: var(--accent);
-      color: white;
-      transition: background-color 0.2s;
-    }
+.admin-table td:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
 
-    .btn-add-new:hover {
-      background-color: #1a6eff;
-    }
-   
+/* === Estilos para Botones de Acción en Tablas === */
+.btn-edit-user, .btn-delete-user,
+.btn-edit-product, .btn-delete-product,
+.btn-edit-supplier, .btn-delete-supplier {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  margin-left: 4px;
+  transition: all 0.2s ease;
+  color: var(--muted);
+}
+
+.btn-edit-user:hover, .btn-edit-product:hover, .btn-edit-supplier:hover {
+  background-color: #e9f2ff;
+  color: var(--accent);
+}
+
+.btn-delete-user:hover, .btn-delete-product:hover, .btn-delete-supplier:hover {
+  background-color: #fff0f0;
+  color: var(--danger);
+}
+
+/* === Estilos para la Tarjeta de Información de Usuario === */
+.info-card {
+  background-color: var(--card);
+  border-radius: var(--radio-borde, 12px);
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  max-width: 600px;
+  margin: 2rem auto; /* Centra la tarjeta horizontalmente */
+  border: 1px solid #f0f0f0;
+}
+
+.info-card-title {
+  text-align: center;
+  font-size: 1.75rem;
+  margin-top: 0;
+  margin-bottom: 2rem;
+  color: var(--text);
+}
+
+.info-card-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.info-label {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Estilos para los spans de género */
+.gender-male { color: #007bff; font-weight: 500; }
+.gender-female { color: #e83e8c; font-weight: 500; }
+.gender-other { color: #6f42c1; font-weight: 500; }
+
+/* === Estilos para la Tarjeta de Paneles de Admin === */
+.admin-panel-card {
+  background-color: var(--card);
+  border-radius: var(--radio-borde, 12px);
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 1px solid #f0f0f0;
+  width: 100%;
+  box-sizing: border-box;
+}
