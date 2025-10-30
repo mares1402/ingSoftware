@@ -20,3 +20,48 @@
     <tbody></tbody>
   </table>
 </div>
+
+<div id="modal-editar-proveedor" class="modal" style="display: none;">
+  <form id="form-editar-proveedor" class="modal-content">
+    <h2>Editar proveedor</h2>
+
+    <!-- Campo oculto para almacenar el ID -->
+    <input type="hidden" id="edit-proveedor-id">
+
+    <label>Nombre:</label>
+    <input type="text" id="edit-nombre" required>
+
+    <label>Teléfono:</label>
+    <input type="text" id="edit-telefono">
+
+    <label>Correo:</label>
+    <input type="email" id="edit-correo">
+
+    <label>Dirección:</label>
+    <input type="text" id="edit-direccion">
+
+    <div class="modal-actions">
+      <button type="submit" class="btn-guardar">Guardar cambios</button>
+      <button type="button" class="btn-cancelar" onclick="document.getElementById('modal-editar-proveedor').style.display='none'">Cancelar</button>
+    </div>
+  </form>
+</div>
+
+<div id="modal-agregar-proveedor" class="modal" style="display: none;">
+  <form id="form-agregar-proveedor" class="modal-content">
+    <h2>Agregar nuevo proveedor</h2>
+    <label>Nombre:</label>
+    <input type="text" id="nuevo-proveedor-nombre" required>
+
+    <label>Teléfono:</label>
+    <input type="text" id="nuevo-proveedor-telefono">
+
+    <label>Correo:</label>
+    <input type="email" id="nuevo-proveedor-correo">
+
+    <label>Dirección:</label>
+    <input type="text" id="nuevo-proveedor-direccion">
+
+    <button type="submit" class="btn-guardar">Guardar</button>
+  </form>
+</div>

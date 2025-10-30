@@ -18,3 +18,22 @@
     <tbody></tbody>
   </table>
 </div>
+
+<div id="modal-editar-producto" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3>Editar Producto</h3>
+    <form id="form-editar-producto">
+      <input type="hidden" id="edit-producto-id">
+      <label>Nombre:</label>
+      <input type="text" id="edit-producto-nombre" required>
+      <label>Categoría:</label>
+      <select id="edit-producto-categoria" required>
+        <option value="">Cargando categorías...</option>
+      </select>
+      <div class="modal-actions">
+        <button type="submit" class="btn-guardar">Guardar</button>
+        <button type="button" class="btn-cancelar" onclick="document.getElementById('modal-editar-producto').style.display='none'">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>

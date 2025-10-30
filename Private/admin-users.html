@@ -23,3 +23,56 @@
     <tbody></tbody>
   </table>
 </div>
+
+<!-- Modal de edición -->
+<div id="modal-editar" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h3>Editar Usuario</h3>
+    <form id="form-editar">
+      <input type="hidden" id="edit-id" name ="id_usuario">
+      <label>Nombre:</label>
+      <input type="text" id="edit-nombre" name="nombre" required>
+
+      <label>Apellido paterno:</label>
+      <input type="text" id="edit-paterno" name="paterno" required>
+
+      <label>Apellido materno:</label>
+      <input type="text" id="edit-materno" name="materno">
+
+      <label>Correo:</label>
+      <input type="email" id="edit-correo" name="correo" required>
+
+      <label>Teléfono:</label>
+      <input type="text" id="edit-telefono" name="telefono">
+
+      <label>Género:</label>
+      <select id="edit-genero" name="genero">
+        <option value="Masculino">Masculino</option>
+        <option value="Femenino">Femenino</option>
+      </select>
+
+      <label>Tipo de usuario:</label>
+      <select id="edit-tipo" name="tipo_usuario">
+        <option value="1">Cliente</option>
+        <option value="2">Administrador</option>
+      </select>
+
+      <div class="modal-actions">
+        <button type="submit" class="btn-guardar">Guardar</button>
+        <button type="button" class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div id="modal-confirm" class="modal" style="display: none;">
+  <div class="modal-content">
+    <h3>Confirmar eliminación</h3>
+    <p>¿Seguro que deseas eliminar este usuario?</p>
+    <div class="modal-actions">
+      <button id="btn-confirmar-eliminar" class="btn-eliminar">Sí, eliminar</button>
+      <button class="btn-cancelar" onclick="cerrarConfirmacion()">Cancelar</button>
+    </div>
+  </div>
+</div>
