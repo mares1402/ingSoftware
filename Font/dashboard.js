@@ -22,53 +22,92 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('userFullName').textContent = `${nombre} ${paterno} ${materno}`.trim() || 'Usuario';
     document.getElementById('userEmail').textContent = correo;
 
+    // --- Lógica del Dashboard ---
+    const userContent = document.getElementById('user-content');
+    const adminControls = document.getElementById('admin-controls');
+    const adminActions = document.querySelector('.admin-actions');
+    const adminContentArea = document.getElementById('admin-content-area');
+    const modalContainer = document.getElementById('modal-container');
+
+    // Contenido para usuario normal
     let generoHTML = `<strong>Género:</strong> `;
     if (genero === 'Masculino') generoHTML += `<span style="color:#007bff">Masculino ♂️</span>`;
     else if (genero === 'Femenino') generoHTML += `<span style="color:#e83e8c">Femenino ♀️</span>`;
     else generoHTML += `<span style="color:#6f42c1">${genero} ⚧️</span>`;
 
-    document.getElementById('infoText').innerHTML =
-      `${generoHTML} <br><strong>Tipo:</strong> ${esAdmin ? 'Administrador' : 'Cliente'} ${esAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}`;
+    userContent.innerHTML = `<p>${generoHTML}</p>`;
 
-    document.getElementById('adminArea').style.display = esAdmin ? 'block' : 'none';
-
-    // --- Modal ---
-    const modal = document.getElementById('adminModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalBody = document.getElementById('modalBody');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const modalOverlay = document.getElementById('modalOverlay');
-
-    const closeModal = () => {
-      modal.hidden = true;
-      document.body.style.overflow = '';
-      modalBody.innerHTML = '<p>Cargando...</p>';
-    };
-    closeModalBtn.addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', closeModal);
-
-
-    // --- Función para abrir paneles ---
-    const openPanel = async (archivo, title) => {
-      modal.hidden = false;
-      document.body.style.overflow = 'hidden';
-      modalTitle.textContent = title;
-
+    // Función para mostrar un panel de admin
+    const showAdminPanel = async (panelName, button) => {
+      document.querySelectorAll('.btn-admin.active').forEach(btn => btn.classList.remove('active'));
+      if (button) button.classList.add('active');
+      
+      adminContentArea.innerHTML = '<p>Cargando...</p>';
       try {
-        const resp = await fetch(`/api/admin/panel/${archivo}`, { credentials: 'same-origin' });
-        if (!resp.ok) throw new Error('No se pudo cargar el archivo HTML');
-        modalBody.innerHTML = await resp.text();
-
-        // Llamar a la función de carga según el panel
-        if (archivo === 'admin-users.html') loadUsuarios();
-        if (archivo === 'admin-products.html') loadProductos();
-        if (archivo === 'admin-suppliers.html') loadProveedores();
+        const resp = await fetch(`/api/admin/panel/${panelName}`, { credentials: 'same-origin' });
+        if (!resp.ok) throw new Error(`No se pudo cargar el panel ${panelName}`);
+        adminContentArea.innerHTML = `<div class="admin-panel">${await resp.text()}</div>`;
+        
+        // Cargar datos y modales correspondientes
+        if (panelName === 'admin-users.html') {
+          await loadModal('modal-editar-usuario.html');
+          loadUsuarios();
+        }
+        if (panelName === 'admin-products.html') {
+          await loadModal('modal-editar-producto.html');
+          loadProductos();
+        }
+        if (panelName === 'admin-suppliers.html') {
+          await loadModal('modal-editar-proveedor.html');
+          await loadModal('modal-agregar-proveedor.html');
+          loadProveedores();
+        }
       } catch (err) {
-        modalBody.innerHTML = `<p>Error cargando panel: ${err.message}</p>`;
+        adminContentArea.innerHTML = `<p>Error cargando el panel: ${err.message}</p>`;
         console.error(err);
       }
     };
-    
+
+    // Función para cargar un modal HTML en el contenedor
+    const loadModal = async (modalFile) => {
+      const resp = await fetch(`/api/admin/panel/${modalFile}`, { credentials: 'same-origin' });
+      if (resp.ok) {
+        const modalHtml = await resp.text();
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = modalHtml;
+        const modalElement = tempDiv.firstChild;
+        if (modalElement && !document.getElementById(modalElement.id)) {
+          modalContainer.appendChild(modalElement);
+          // Añadir listeners para cerrar el modal
+          modalElement.querySelector('.modal-close-btn, .modal-overlay')?.addEventListener('click', () => {
+            modalElement.style.display = 'none';
+          });
+        }
+      }
+    };
+
+    if (esAdmin) {
+      adminControls.style.display = 'block';
+      userContent.innerHTML += `<p><strong>Tipo:</strong> Administrador <span class="admin-badge">ADMIN</span></p>`;
+
+      const adminPanels = [
+        { file: 'admin-users.html', title: 'Usuarios', icon: 'fa-users' },
+        { file: 'admin-products.html', title: 'Productos', icon: 'fa-box-archive' },
+        { file: 'admin-suppliers.html', title: 'Proveedores', icon: 'fa-dolly' }
+      ];
+
+      adminPanels.forEach(panel => {
+        const button = document.createElement('button');
+        button.className = 'btn-admin';
+        button.innerHTML = `<i class="fa-solid ${panel.icon}"></i> ${panel.title}`;
+        button.onclick = () => showAdminPanel(panel.file, button);
+        adminActions.appendChild(button);
+      });
+
+      // Mostrar el primer panel por defecto
+      if (adminActions.firstChild) adminActions.firstChild.click();
+    }
+
     async function cargarCategoriasSelect() {
       const resp = await fetch('/api/admin/categorias');
       const categorias = await resp.json();
@@ -471,25 +510,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
-
-    // Botones de paneles
-    document.querySelectorAll('.btn-admin').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const archivo = btn.dataset.file;
-        const title = btn.dataset.panelTitle;
-        if (archivo && title) openPanel(archivo, title);
-      });
-    });
-
     // Botones generales
     document.getElementById('btnEdit').addEventListener('click', () => {
       alert('Aquí iría la edición de perfil.');
     });
 
-    document.getElementById('btnLogout').addEventListener('click', async () => {
+    const logoutFunction = async (e) => {
+      e.preventDefault(); // Prevenir la navegación si es un enlace
       await fetch('/logout', { method: 'POST' });
       window.location.href = '/';
-    });
+    };
+
+    // Asignar la función de logout a ambos botones
+    document.getElementById('btnLogout').addEventListener('click', logoutFunction);
 
     document.getElementById('btnHome').addEventListener('click', () => {
       window.location.href = '/';
