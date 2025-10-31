@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
           if (section === 'admin-products.html') loadProductos();
           if (section === 'admin-suppliers.html') loadProveedores();
+          // Aquí podrías añadir la carga de datos para las cotizaciones en el futuro
         } catch (err) {
           contentArea.innerHTML = `<p>Error cargando el panel: ${err.message}</p>`;
           console.error(err);
@@ -82,6 +83,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           <li><a href="#" class="nav-link" data-section="admin-products.html"><i class="fa-solid fa-box-archive"></i> Productos</a></li>
           <li><a href="#" class="nav-link" data-section="admin-suppliers.html"><i class="fa-solid fa-dolly"></i> Proveedores</a></li>
         </ul>
+      `;
+    } else {
+      // Menú para clientes
+      navHTML += `
+        <hr>
+        <h4 class="nav-title">Opciones</h4>
+        <ul><li><a href="#" class="nav-link" data-section="client-quotes.html"><i class="fa-solid fa-file-invoice-dollar"></i> Mis Cotizaciones</a></li></ul>
       `;
     }
     navContainer.innerHTML = navHTML;
