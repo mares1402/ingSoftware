@@ -303,33 +303,35 @@ hr { border:0; border-top:1px solid #eee; }
 /* === Estilos para Tablas de Admin === */
 .admin-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0; 
   margin-top: 1.5rem;
   background-color: var(--card);
   border-radius: var(--radio-borde, 8px);
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   font-size: 0.9rem;
+  table-layout:auto;
 }
-
 .admin-table thead tr {
   background-color: #f8f9fa; /* Fondo gris claro del encabezado de tabla */
-  color: var(--muted);
+  color: #343a40; /* Texto más oscuro para mejor contraste */
   text-align: left;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-size: 0.8rem; /* Hacemos el texto del encabezado un poco más pequeño */
 }
 
 .admin-table th,
 .admin-table td {
   padding: 12px 15px;
-  vertical-align: middle;
+  vertical-align: middle; /* Alineación vertical centrada para mejor legibilidad */
 }
 
 .admin-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .admin-table tbody tr:last-of-type {
@@ -337,12 +339,14 @@ hr { border:0; border-top:1px solid #eee; }
 }
 
 .admin-table tbody tr:hover {
-  background-color: #f5f5f5;
+  background-color: #f9fafb;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05); /* Sombra sutil al pasar el cursor */
 }
 
 .admin-table td:last-child {
-  text-align: right;
+  text-align: left; /* Alinea los botones de acción a la izquierda */
   white-space: nowrap;
+  width: 120px; /* Ancho fijo para la columna de acciones */
 }
 
 /* === Estilos para Botones de Acción en Tablas === */
