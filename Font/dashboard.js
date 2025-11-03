@@ -126,18 +126,43 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     };
 
-    async function cargarCategoriasSelect() {
-      // Esta función parece específica para productos, la dejamos como está.
-      const resp = await fetch('/api/admin/categorias');
-      const categorias = await resp.json();
-      const select = document.getElementById('edit-producto-categoria');
-      select.innerHTML = '';
-      categorias.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat.id_categoria;
-        option.textContent = cat.nombre_categoria;
-        select.appendChild(option);
+    // --- Cargar categorías en el select ---
+    async function cargarCategoriasSelect(selectId) {
+      const res = await fetch('/api/admin/categorias');
+      const cats = await res.json();
+      const select = document.getElementById(selectId);
+      select.innerHTML = '<option value="">Seleccionar...</option>';
+      cats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id_categoria;
+        opt.textContent = c.nombre_categoria;
+        select.appendChild(opt);
       });
+    }
+
+    // --- Cargar proveedores en el select ---
+    async function cargarProveedoresSelect(selectId) {
+      try {
+        const res = await fetch('/api/admin/proveedores', {
+          method: 'GET',
+          credentials: 'same-origin'
+        });
+        const proveedores = await res.json();
+
+        const select = document.getElementById(selectId);
+        select.innerHTML = '<option value="">Seleccione un proveedor</option>';
+
+        proveedores.forEach(proveedor => {
+          const option = document.createElement('option');
+          option.value = proveedor.id_proveedor;
+          option.textContent = proveedor.nombre_proveedor;
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Error al cargar proveedores:', err);
+        const select = document.getElementById(selectId);
+        select.innerHTML = '<option value="">Error al cargar proveedores</option>';
+      }
     }
 
     // --- Función para cargar usuarios ---
@@ -206,7 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Cargar productos ---
     async function loadProductos() {
     try {
-      const res = await fetch('/api/admin/productos', { credentials: 'same-origin' });
+      const res = await fetch('/api/admin/productos', { credentials: 'same-origin' , headers: { 'Accept': 'application/json' }});
       if (!res.ok) throw new Error('No se pudieron obtener los productos');
       const productos = await res.json();
 
@@ -222,6 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <td>${p.id_producto}</td>
           <td>${p.nombre_producto}</td>
           <td>${p.nombre_categoria || '-'}</td>
+          <td>${p.nombre_proveedor || 'Sin proveedor'}</td>
           <td>
             <button class="btn-edit-product" data-id="${p.id_producto}">
               <i class="fa-solid fa-pen"></i>
@@ -384,6 +410,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Abrir modal de edición de producto ---
     async function openEditProductModal(id) {
       try {
+        await cargarCategoriasSelect('nuevo-producto-categoria');
+        await cargarProveedoresSelect('nuevo-producto-proveedor');
         const res = await fetch(`/api/admin/productos/${id}`, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Producto no encontrado');
         const p = await res.json();
@@ -531,6 +559,55 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     };
   }
+
+  // --- Abrir modal para añadir producto ---
+  async function openAddProductModal() {
+    const modal = document.getElementById('modal-agregar-producto');
+    modal.style.display = 'flex';
+
+    await cargarCategoriasSelect('nuevo-producto-categoria');
+    await cargarProveedoresSelect('nuevo-producto-proveedor');
+
+    const form = document.getElementById('form-agregar-producto');
+    form.onsubmit = async e => {
+      e.preventDefault();
+
+      const data = {
+        nombre_producto: document.getElementById('nuevo-producto-nombre').value,
+        id_categoria: document.getElementById('nuevo-producto-categoria').value,
+        id_proveedor: document.getElementById('nuevo-producto-proveedor').value
+      };
+
+      try {
+        const res = await fetch('/api/admin/productos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          alert('✅ Producto agregado correctamente');
+          modal.style.display = 'none';
+          loadProductos();
+        } else {
+          alert('❌ Error al agregar producto: ' + (result.mensaje || 'Error desconocido'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error al agregar producto: ' + err.message);
+      }
+    };
+  }
+
+  // --- Escuchar el botón de añadir producto ---
+  document.addEventListener('click', e => {
+    if (e.target.closest('.btn-add-new')) {
+      openAddProductModal();
+    }
+  });
 
     // Botones generales
     document.getElementById('btnEdit').addEventListener('click', () => {

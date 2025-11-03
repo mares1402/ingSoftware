@@ -13,7 +13,10 @@ function isAdmin(req, res, next) {
   if (req.session && req.session.user && Number(req.session.user.tipo_usuario) === 2) {
     return next();
   }
-  return res.status(403).json({ mensaje: 'Acceso denegado' });
+  if (req.xhr || (req.headers.accept && req.headers.accept.indexOf('application/json') > -1)) {
+    return res.status(403).json({ mensaje: 'Acceso denegado' });
+  }
+  return res.status(403).send('Acceso denegado');
 }
 
 // --- USUARIOS ---
@@ -72,29 +75,43 @@ router.delete('/usuarios/:id', isAuthenticated, isAdmin, (req, res) => {
 });
 
 // --- PRODUCTOS ---
-// Obtener todos los productos con nombre de categoría
+// Obtener todos los productos con nombre de categoría y proveedor
 router.get('/productos', isAuthenticated, isAdmin, (req, res) => {
   const sql = `
-    SELECT p.id_producto, p.nombre_producto, c.nombre_categoria
+    SELECT 
+      p.id_producto, 
+      p.nombre_producto, 
+      c.nombre_categoria,
+      pr.nombre_proveedor
     FROM Productos p
     LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria
+    LEFT JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
+    LEFT JOIN Proveedores pr ON pp.id_proveedor = pr.id_proveedor
   `;
   conexion.query(sql, (err, results) => {
     if (err) {
-      console.error(err);
+      console.error('Error al obtener productos:', err);
       return res.status(500).json({ mensaje: 'Error al obtener productos' });
     }
     res.json(results);
   });
 });
 
-// Obtener producto individual
+// Obtener producto individual (con proveedor)
 router.get('/productos/:id', isAuthenticated, isAdmin, (req, res) => {
   const { id } = req.params;
   const query = `
-    SELECT p.id_producto, p.nombre_producto, p.id_categoria, c.nombre_categoria AS categoria
+    SELECT 
+      p.id_producto, 
+      p.nombre_producto, 
+      p.id_categoria, 
+      c.nombre_categoria AS categoria,
+      pr.id_proveedor,
+      pr.nombre_proveedor
     FROM Productos p
     LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria
+    LEFT JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
+    LEFT JOIN Proveedores pr ON pp.id_proveedor = pr.id_proveedor
     WHERE p.id_producto = ?
   `;
   conexion.query(query, [id], (err, results) => {
@@ -104,39 +121,105 @@ router.get('/productos/:id', isAuthenticated, isAdmin, (req, res) => {
   });
 });
 
-// Crear producto
+// Crear producto y asociarlo con proveedor
 router.post('/productos', isAuthenticated, isAdmin, (req, res) => {
-  const { nombre_producto, id_categoria } = req.body;
-  conexion.query(
-    'INSERT INTO Productos (nombre_producto, id_categoria) VALUES (?, ?)',
-    [nombre_producto, id_categoria],
-    (err, result) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al crear producto', error: err });
-      res.json({ mensaje: 'Producto creado correctamente', id: result.insertId });
-    }
-  );
+  const { nombre_producto, id_categoria, id_proveedor } = req.body;
+  console.log('\n=== POST /api/admin/productos ===');
+  console.log('Usuario en sesión:', req.session.user);
+  console.log('Cuerpo recibido:', req.body);
+  conexion.getConnection((err, conn) => {
+  if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
+
+  conn.beginTransaction(err => {
+      if (err) {
+        conn.release();
+        return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
+      }
+
+      conn.query(
+        'INSERT INTO Productos (nombre_producto, id_categoria) VALUES (?, ?)',
+        [req.body.nombre_producto, req.body.id_categoria],
+        (err, result) => {
+          if (err) {
+            return conn.rollback(() => {
+              conn.release();
+              res.status(500).json({ mensaje: 'Error al crear producto', error: err });
+            });
+          }
+
+          const id_producto = result.insertId;
+
+          conn.query(
+            'INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)',
+            [id_producto, req.body.id_proveedor],
+            (err) => {
+              if (err) {
+                return conn.rollback(() => {
+                  conn.release();
+                  res.status(500).json({ mensaje: 'Error al asociar producto con proveedor', error: err });
+                });
+              }
+
+              conn.commit(err => {
+                if (err) {
+                  return conn.rollback(() => {
+                    conn.release();
+                    res.status(500).json({ mensaje: 'Error al confirmar transacción', error: err });
+                  });
+                }
+
+                conn.release();
+                res.json({ mensaje: 'Producto y proveedor asociados correctamente', id: id_producto });
+              });
+            }
+          );
+        }
+      );
+    });
+  });
 });
 
-// Actualizar producto
+// Actualizar producto y su proveedor
 router.put('/productos/:id', isAuthenticated, isAdmin, (req, res) => {
   const { id } = req.params;
-  const { nombre_producto, id_categoria } = req.body; // <-- usar id_categoria
-  conexion.query(
-    'UPDATE Productos SET nombre_producto=?, id_categoria=? WHERE id_producto=?',
-    [nombre_producto, id_categoria, id], // <-- actualizar columna correcta
-    (err) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al actualizar producto', error: err });
-      res.json({ mensaje: 'Producto actualizado correctamente' });
-    }
-  );
-});
+  const { nombre_producto, id_categoria, id_proveedor } = req.body;
 
-// Eliminar producto
-router.delete('/productos/:id', isAuthenticated, isAdmin, (req, res) => {
-  const { id } = req.params;
-  conexion.query('DELETE FROM Productos WHERE id_producto=?', [id], (err) => {
-    if (err) return res.status(500).json({ mensaje: 'Error al eliminar producto', error: err });
-    res.json({ mensaje: 'Producto eliminado correctamente' });
+  conexion.beginTransaction(err => {
+    if (err) return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
+
+    conexion.query(
+      'UPDATE Productos SET nombre_producto=?, id_categoria=? WHERE id_producto=?',
+      [nombre_producto, id_categoria, id],
+      (err) => {
+        if (err) {
+          return conexion.rollback(() => {
+            res.status(500).json({ mensaje: 'Error al actualizar producto', error: err });
+          });
+        }
+
+        // Actualizar proveedor asociado
+        conexion.query(
+          'UPDATE ProductoProveedor SET id_proveedor=? WHERE id_producto=?',
+          [id_proveedor, id],
+          (err, result) => {
+            if (err) {
+              return conexion.rollback(() => {
+                res.status(500).json({ mensaje: 'Error al actualizar proveedor del producto', error: err });
+              });
+            }
+
+            conexion.commit(err => {
+              if (err) {
+                return conexion.rollback(() => {
+                  res.status(500).json({ mensaje: 'Error al confirmar cambios', error: err });
+                });
+              }
+              res.json({ mensaje: 'Producto actualizado correctamente' });
+            });
+          }
+        );
+      }
+    );
   });
 });
 
