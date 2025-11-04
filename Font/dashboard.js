@@ -609,6 +609,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // --- Añadir productos desde excel ---
+  window.subirExcelProductos = async function (file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/admin/productos/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      });
+      const data = await res.json();
+      alert(data.mensaje);
+      loadProductos();
+    } catch (err) {
+      console.error('Error al subir Excel de productos:', err);
+    }
+  }
+
+  // --- Añadir proveedores desde excel ---
+  window.subirExcelProveedores = async function (file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/admin/proveedores/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      });
+      const data = await res.json();
+      alert(data.mensaje);
+      loadProveedores();
+    } catch (err) {
+      console.error('Error al subir Excel de proveedores:', err);
+    }
+  }
+
     // Botones generales
     document.getElementById('btnEdit').addEventListener('click', () => {
       alert('Aquí iría la edición de perfil.');

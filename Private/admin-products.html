@@ -2,6 +2,10 @@
   <div class="panel-actions">
     <input type="search" placeholder="Buscar por nombre o SKU..." class="panel-search" aria-label="Buscar productos">
     <button class="btn-add-new"><i class="fa-solid fa-plus"></i> Añadir Producto</button>
+    <button class="btn-upload-excel" onclick="document.getElementById('excelProductos').click()">
+      <i class="fa-solid fa-file-excel"></i> Cargar desde Excel
+    </button>
+    <input type="file" id="excelProductos" accept=".xlsx, .xls" style="display:none" onchange="subirExcelProductos(this.files[0])">
   </div>
 </div>
 

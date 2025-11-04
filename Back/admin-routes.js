@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const conexion = require('./conexion');
 const path = require('path');
+const multer = require('multer');
+const XLSX = require('xlsx');
+
+// Configurar multer (carpeta temporal)
+const upload = multer({ dest: 'uploads/' });
 
 // --- Middlewares ---
 function isAuthenticated(req, res, next) {
@@ -75,6 +80,68 @@ router.delete('/usuarios/:id', isAuthenticated, isAdmin, (req, res) => {
 });
 
 // --- PRODUCTOS ---
+// === CARGAR PRODUCTOS DESDE EXCEL ===
+router.post('/productos/upload', isAuthenticated, isAdmin, upload.single('file'), (req, res) => {
+  try {
+    const workbook = XLSX.readFile(req.file.path);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet);
+
+    // data = [{ Nombre, Categoria, Proveedor }, ...]
+
+    const inserts = data.map(row => [row.Nombre, row.Categoria]);
+
+    conexion.getConnection((err, conn) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
+
+      conn.beginTransaction(err => {
+        if (err) {
+          conn.release();
+          return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
+        }
+
+        const sqlProductos = `INSERT INTO Productos (nombre_producto, id_categoria) VALUES ?`;
+        conn.query(sqlProductos, [inserts], (err, result) => {
+          if (err) {
+            return conn.rollback(() => {
+              conn.release();
+              res.status(500).json({ mensaje: 'Error al insertar productos', error: err });
+            });
+          }
+
+          // Asociar proveedores
+          const productoIds = Array.from({ length: result.affectedRows }, (_, i) => result.insertId + i);
+          const productoProveedor = data.map((row, idx) => [productoIds[idx], row.Proveedor]);
+
+          const sqlPP = `INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES ?`;
+          conn.query(sqlPP, [productoProveedor], (err) => {
+            if (err) {
+              return conn.rollback(() => {
+                conn.release();
+                res.status(500).json({ mensaje: 'Error al asociar proveedores', error: err });
+              });
+            }
+
+            conn.commit(err => {
+              if (err) {
+                return conn.rollback(() => {
+                  conn.release();
+                  res.status(500).json({ mensaje: 'Error al confirmar inserción', error: err });
+                });
+              }
+
+              conn.release();
+              res.json({ mensaje: `Se insertaron ${result.affectedRows} productos correctamente.` });
+            });
+          });
+        });
+      });
+    });
+  } catch (err) {
+    res.status(500).json({ mensaje: 'Error al procesar archivo Excel', error: err });
+  }
+});
+
 // Obtener todos los productos con nombre de categoría y proveedor
 router.get('/productos', isAuthenticated, isAdmin, (req, res) => {
   const sql = `
@@ -223,7 +290,58 @@ router.put('/productos/:id', isAuthenticated, isAdmin, (req, res) => {
   });
 });
 
+// Eliminar producto
+router.delete('/productos/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    console.log(`Eliminando producto con ID: ${id}`);
+
+    const [resultado] = await conexion.query(
+      'DELETE FROM Productos WHERE id_producto = ?',
+      [id]
+    );
+
+    if (resultado.affectedRows === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    res.json({ mensaje: 'Producto eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar producto:', error);
+    res.status(500).json({ error: 'Error al eliminar el producto' });
+  }
+});
+
 // --- PROVEEDORES ---
+// === CARGAR PROVEEDORES DESDE EXCEL ===
+router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file'), (req, res) => {
+  try {
+    const workbook = XLSX.readFile(req.file.path);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet);
+
+    // data = [{ Nombre, Telefono, Correo, Direccion }, ...]
+
+    const inserts = data.map(row => [
+      row.Nombre,
+      row.Telefono,
+      row.Correo,
+      row.Direccion
+    ]);
+
+    const sql = `INSERT INTO Proveedores (nombre_proveedor, telefono, correo, direccion)
+                 VALUES ?`;
+
+    conexion.query(sql, [inserts], (err, result) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al insertar proveedores', error: err });
+      res.json({ mensaje: `Se agregaron ${result.affectedRows} proveedores correctamente.` });
+    });
+  } catch (err) {
+    res.status(500).json({ mensaje: 'Error al procesar archivo Excel', error: err });
+  }
+});
+
 // Obtener todos los proveedores
 router.get('/proveedores', isAuthenticated, isAdmin, (req, res) => {
   conexion.query('SELECT * FROM Proveedores', (err, results) => {
