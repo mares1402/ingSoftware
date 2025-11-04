@@ -1,0 +1,34 @@
+<div class="panel-header">
+  <div class="panel-actions">
+    <button class="btn-add-new" onclick="mostrarModalCategoria()">+ Añadir Categoría</button>
+  </div>
+</div>
+
+<div class="panel-content">
+  <table id="categoriesTable" class="admin-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre de Categoría</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- Modal para agregar categoria-->
+<div id="modal-categoria" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h3 id="modalCategoriaTitulo">Nueva Categoría</h3>
+    <form id="form-categoria">
+      <input type="hidden" id="categoria-id">
+      <label>Nombre de categoría:</label>
+      <input type="text" id="categoria-nombre" required>
+      <div class="modal-actions">
+        <button type="submit" class="btn-guardar">Guardar</button>
+        <button type="button" class="btn-cancelar" onclick="cerrarModalCategoria()">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
