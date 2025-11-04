@@ -12,6 +12,7 @@
         <th>ID</th>
         <th>Nombre</th>
         <th>Categoría</th>
+        <th>Proveedor</th>
         <th>Acciones</th>
       </tr>
     </thead>
@@ -19,6 +20,7 @@
   </table>
 </div>
 
+<!-- Modal para editar producto -->
 <div id="modal-editar-producto" class="modal" style="display:none;">
   <div class="modal-content">
     <h3>Editar Producto</h3>
@@ -30,10 +32,39 @@
       <select id="edit-producto-categoria" required>
         <option value="">Cargando categorías...</option>
       </select>
+      <label>Proveedor:</label>
+      <select id="edit-producto-proveedor" required>
+        <option value="">Cargando proveedores...</option>
+      </select>
       <div class="modal-actions">
         <button type="submit" class="btn-guardar">Guardar</button>
         <button type="button" class="btn-cancelar" onclick="document.getElementById('modal-editar-producto').style.display='none'">Cancelar</button>
       </div>
     </form>
   </div>
+</div>
+
+<!-- Modal para agregar producto -->
+<div id="modal-agregar-producto" class="modal" style="display:none;">
+  <form id="form-agregar-producto" class="modal-content">
+    <h2>Agregar nuevo producto</h2>
+
+    <label>Nombre:</label>
+    <input type="text" id="nuevo-producto-nombre" required>
+
+    <label>Categoría:</label>
+    <select id="nuevo-producto-categoria" required>
+      <option value="">Cargando categorías...</option>
+    </select>
+
+    <label>Proveedor:</label>
+    <select id="nuevo-producto-proveedor" required>
+      <option value="">Cargando proveedores...</option>
+    </select>
+
+    <div class="modal-actions">
+      <button type="submit" class="btn-guardar">Guardar</button>
+      <button type="button" class="btn-cancelar" onclick="document.getElementById('modal-agregar-producto').style.display='none'">Cancelar</button>
+    </div>
+  </form>
 </div>
