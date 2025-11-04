@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const conexion = require('./conexion');
+// const multer = require('multer'); // Multer se importa y configura en app.js
 const path = require('path');
 const multer = require('multer');
 const XLSX = require('xlsx');
@@ -148,6 +149,7 @@ router.get('/productos', isAuthenticated, isAdmin, (req, res) => {
     SELECT 
       p.id_producto, 
       p.nombre_producto, 
+      p.ruta_imagen,
       c.nombre_categoria,
       pr.nombre_proveedor
     FROM Productos p
@@ -171,7 +173,8 @@ router.get('/productos/:id', isAuthenticated, isAdmin, (req, res) => {
     SELECT 
       p.id_producto, 
       p.nombre_producto, 
-      p.id_categoria, 
+      p.id_categoria,
+      p.ruta_imagen,
       c.nombre_categoria AS categoria,
       pr.id_proveedor,
       pr.nombre_proveedor
@@ -189,8 +192,10 @@ router.get('/productos/:id', isAuthenticated, isAdmin, (req, res) => {
 });
 
 // Crear producto y asociarlo con proveedor
-router.post('/productos', isAuthenticated, isAdmin, (req, res) => {
-  const { nombre_producto, id_categoria, id_proveedor } = req.body;
+// La función adminRoutes ahora recibe 'upload' como argumento
+module.exports = (upload) => { // Envuelve las rutas en una función que acepta 'upload'
+  // Crear producto y asociarlo con proveedor (con subida de imagen)
+  router.post('/productos', isAuthenticated, isAdmin, upload.single('imagen_producto'), (req, res) => {
   console.log('\n=== POST /api/admin/productos ===');
   console.log('Usuario en sesión:', req.session.user);
   console.log('Cuerpo recibido:', req.body);
@@ -204,8 +209,9 @@ router.post('/productos', isAuthenticated, isAdmin, (req, res) => {
       }
 
       conn.query(
-        'INSERT INTO Productos (nombre_producto, id_categoria) VALUES (?, ?)',
-        [req.body.nombre_producto, req.body.id_categoria],
+        'INSERT INTO Productos (nombre_producto, id_categoria, ruta_imagen) VALUES (?, ?, ?)', // Añadimos ruta_imagen
+        [req.body.nombre_producto, req.body.id_categoria, req.file ? `/uploads/products/${req.file.filename}` : null], // Guardamos la ruta
+        // req.file contiene la información del archivo subido por multer
         (err, result) => {
           if (err) {
             return conn.rollback(() => {
@@ -247,7 +253,7 @@ router.post('/productos', isAuthenticated, isAdmin, (req, res) => {
 });
 
 // Actualizar producto y su proveedor
-router.put('/productos/:id', isAuthenticated, isAdmin, (req, res) => {
+router.put('/productos/:id', isAuthenticated, isAdmin, upload.single('imagen_producto'), (req, res) => { // Con subida de imagen
   const { id } = req.params;
   const { nombre_producto, id_categoria, id_proveedor } = req.body;
 
@@ -255,8 +261,14 @@ router.put('/productos/:id', isAuthenticated, isAdmin, (req, res) => {
     if (err) return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
 
     conexion.query(
-      'UPDATE Productos SET nombre_producto=?, id_categoria=? WHERE id_producto=?',
-      [nombre_producto, id_categoria, id],
+      // Actualizamos la ruta de la imagen solo si se subió una nueva
+      `UPDATE Productos SET nombre_producto=?, id_categoria=? ${req.file ? ', ruta_imagen=?' : ''} WHERE id_producto=?`,
+      [
+        nombre_producto,
+        id_categoria,
+        ...(req.file ? [`/uploads/products/${req.file.filename}`] : []), // Añadimos la ruta si existe
+        id
+      ],
       (err) => {
         if (err) {
           return conexion.rollback(() => {
@@ -421,3 +433,6 @@ router.get('/panel/:archivo', isAuthenticated, isAdmin, (req, res) => {
 });
 
 module.exports = router;
+
+  return router; // Retorna el router configurado
+};

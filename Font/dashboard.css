@@ -281,7 +281,7 @@ hr { border:0; border-top:1px solid #eee; }
   border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 0.9rem;
-  min-width: 200px;
+  min-width: 300px;
 }
 .btn-add-new {
   padding: 8px 12px;
