@@ -6,6 +6,7 @@ const conexion = require('./Back/conexion');
 const authRoutes = require('./Back/aut-controller');
 const fs = require('fs'); // <-- Añadimos el módulo de archivos
 const adminRoutes = require('./Back/admin-routes');
+const multer = require('multer'); // Añadimos multer
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -21,6 +22,24 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 2 // 2 horas
   }
 }));
+
+// --- Multer Configuration for Product Images ---
+const productUploadDir = path.join(__dirname, 'uploads', 'products');
+if (!fs.existsSync(productUploadDir)) {
+  fs.mkdirSync(productUploadDir, { recursive: true });
+}
+
+const productStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, productUploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const uploadProductImage = multer({ storage: productStorage }); // Middleware para subir imágenes de productos
+
 
 // Middlewares de control de acceso 
 function isAuthenticated(req, res, next) {
@@ -86,7 +105,10 @@ app.post('/logout', (req, res) => {
 });
 
 // Rutas de la API de Admin (para datos)
-app.use('/api/admin', isAdmin, adminRoutes);
+// Pasamos el middleware de upload a adminRoutes
+app.use('/api/admin', isAdmin, adminRoutes(uploadProductImage));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Servir archivos subidos estáticamente
 
 // Rutas públicas de autenticación (login / signup)
 app.use('/', authRoutes);

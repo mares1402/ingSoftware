@@ -11,6 +11,7 @@
       <tr>
         <th>ID</th>
         <th>Nombre</th>
+        <th>Imagen</th>
         <th>Categoría</th>
         <th>Proveedor</th>
         <th>Acciones</th>
@@ -22,49 +23,72 @@
 
 <!-- Modal para editar producto -->
 <div id="modal-editar-producto" class="modal" style="display:none;">
+  <div class="modal-overlay"></div>
   <div class="modal-content">
-    <h3>Editar Producto</h3>
-    <form id="form-editar-producto">
-      <input type="hidden" id="edit-producto-id">
-      <label>Nombre:</label>
-      <input type="text" id="edit-producto-nombre" required>
-      <label>Categoría:</label>
-      <select id="edit-producto-categoria" required>
-        <option value="">Cargando categorías...</option>
-      </select>
-      <label>Proveedor:</label>
-      <select id="edit-producto-proveedor" required>
-        <option value="">Cargando proveedores...</option>
-      </select>
-      <div class="modal-actions">
-        <button type="submit" class="btn-guardar">Guardar</button>
-        <button type="button" class="btn-cancelar" onclick="document.getElementById('modal-editar-producto').style.display='none'">Cancelar</button>
-      </div>
-    </form>
+    <div class="modal-header">
+      <h2>Editar Producto</h2>
+      <button class="modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-editar-producto" enctype="multipart/form-data">
+        <input type="hidden" id="edit-producto-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="edit-producto-nombre">Nombre</label>
+            <input type="text" id="edit-producto-nombre" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-producto-categoria">Categoría</label>
+            <select id="edit-producto-categoria" required>
+              <option value="">Cargando categorías...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-producto-proveedor">Proveedor</label>
+            <select id="edit-producto-proveedor" required><option value="">Cargando...</option></select>
+          </div>
+        </div>
+        <div class="form-group form-group-full" style="margin-top: 1.5rem;">
+            <label for="edit-producto-imagen">Imagen del Producto</label>
+            <input type="file" id="edit-producto-imagen" name="imagen_producto" accept="image/*">
+            <img id="edit-imagen-preview" src="" alt="Previsualización" style="max-width: 100px; max-height: 100px; margin-top: 10px; display: none;">
+        </div>
+        <button type="submit" class="btn-submit">Guardar Cambios</button>
+      </form>
+    </div>
   </div>
 </div>
 
 <!-- Modal para agregar producto -->
 <div id="modal-agregar-producto" class="modal" style="display:none;">
-  <form id="form-agregar-producto" class="modal-content">
-    <h2>Agregar nuevo producto</h2>
-
-    <label>Nombre:</label>
-    <input type="text" id="nuevo-producto-nombre" required>
-
-    <label>Categoría:</label>
-    <select id="nuevo-producto-categoria" required>
-      <option value="">Cargando categorías...</option>
-    </select>
-
-    <label>Proveedor:</label>
-    <select id="nuevo-producto-proveedor" required>
-      <option value="">Cargando proveedores...</option>
-    </select>
-
-    <div class="modal-actions">
-      <button type="submit" class="btn-guardar">Guardar</button>
-      <button type="button" class="btn-cancelar" onclick="document.getElementById('modal-agregar-producto').style.display='none'">Cancelar</button>
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Agregar Nuevo Producto</h2>
+      <button class="modal-close-btn">&times;</button>
     </div>
-  </form>
+    <div class="modal-body">
+      <form id="form-agregar-producto" enctype="multipart/form-data">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="nuevo-producto-nombre">Nombre</label>
+            <input type="text" id="nuevo-producto-nombre" required>
+          </div>
+           <div class="form-group">
+            <label for="nuevo-producto-imagen">Imagen del Producto</label>
+            <input type="file" id="nuevo-producto-imagen" name="imagen_producto" accept="image/*">
+          </div>
+          <div class="form-group">
+            <label for="nuevo-producto-categoria">Categoría</label>
+            <select id="nuevo-producto-categoria" required><option value="">Cargando...</option></select>
+          </div>
+          <div class="form-group">
+            <label for="nuevo-producto-proveedor">Proveedor</label>
+            <select id="nuevo-producto-proveedor" required><option value="">Cargando...</option></select>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit">Guardar Producto</button>
+      </form>
+    </div>
+  </div>
 </div>

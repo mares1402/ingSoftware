@@ -72,6 +72,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     };
 
+    // Función para activar los listeners de cierre de un modal
+    const setupModalCloseListeners = (modalElement) => {
+      if (!modalElement) return;
+      
+      const closeModal = () => { modalElement.style.display = 'none'; };
+
+      const closeButton = modalElement.querySelector('.modal-close-btn');
+      const overlay = modalElement.querySelector('.modal-overlay');
+
+      // Usamos `onclick` para sobreescribir listeners previos y evitar duplicados
+      if (closeButton) closeButton.onclick = closeModal;
+      if (overlay) overlay.onclick = closeModal;
+    };
+
     // Construir navegación
     let navHTML = '<ul><li><a href="#" class="nav-link" data-section="info.html"><i class="fa-solid fa-circle-info"></i> Tu Información</a></li></ul>';
     if (esAdmin) {
@@ -108,6 +122,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       showSection(defaultSectionLink.dataset.section, defaultSectionLink);
     }
 
+    // Usar MutationObserver para detectar cuando se añaden modales al DOM.
+    // Es más eficiente y moderno que DOMNodeInserted.
+    const observer = new MutationObserver((mutationsList) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach(node => {
+            // Si el nodo añadido (o uno de sus hijos) es un modal, configuramos su cierre.
+            if (node.nodeType === 1 && node.matches('.modal')) {
+              setupModalCloseListeners(node);
+            }
+          });
+        }
+      }
+    });
+    observer.observe(contentArea, { childList: true, subtree: true });
+
     // Función para cargar un modal HTML (si es necesario en el futuro)
     const loadModal = async (modalFile) => {
       // Evita cargar el mismo modal dos veces
@@ -119,10 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const modalHtml = await resp.text();
         document.body.insertAdjacentHTML('beforeend', modalHtml); // Añade el modal al final del body
         const modalElement = document.getElementById(modalId);
-        // Añadir listeners para cerrar el modal
-        modalElement.querySelector('.modal-close-btn, .modal-overlay')?.addEventListener('click', () => {
-          modalElement.style.display = 'none';
-        });
+        setupModalCloseListeners(modalElement);
       }
     };
 
@@ -239,6 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const tablaBody = document.querySelector('#productsTable tbody');
       if (!tablaBody) throw new Error('No se encontró la tabla de productos en el DOM');
 
+      // Limpiar filas existentes
       tablaBody.innerHTML = '';
 
       productos.forEach(p => {
@@ -246,6 +274,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         fila.innerHTML = `
           <td>${p.id_producto}</td>
           <td>${p.nombre_producto}</td>
+          <td>${p.ruta_imagen ? `<img src="${p.ruta_imagen}" alt="Imagen" style="width: 50px; height: 50px; object-fit: cover;">` : 'No imagen'}</td>
           <td>${p.nombre_categoria || '-'}</td>
           <td>${p.nombre_proveedor || 'Sin proveedor'}</td>
           <td>
@@ -348,6 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const u = await res.json();
 
         const modal = document.getElementById('modal-editar-usuario');
+        setupModalCloseListeners(modal); // Asegurarse de que el cierre funcione
         modal.style.display = 'flex';
 
         document.getElementById('edit-usuario-id').value = u.id_usuario;
@@ -364,7 +394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.onsubmit = async e => {
           e.preventDefault();
 
-          const id = document.getElementById('edit-id').value;
+          const id = document.getElementById('edit-usuario-id').value;
           const data = {
             nombre: document.getElementById('edit-usuario-nombre').value,
             paterno: document.getElementById('edit-usuario-paterno').value,
@@ -422,13 +452,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         const categorias = await catRes.json();
 
         const modal = document.getElementById('modal-editar-producto');
+        setupModalCloseListeners(modal);
         modal.style.display = 'flex';
 
         document.getElementById('edit-producto-id').value = p.id_producto;
-        document.getElementById('edit-producto-nombre').value = p.nombre_producto;
+        document.getElementById('edit-producto-nombre').value = p.nombre_producto;        
+
+        // Mostrar imagen actual
+        const imgPreview = document.getElementById('edit-imagen-preview');
+        if (p.ruta_imagen) {
+          imgPreview.src = p.ruta_imagen;
+          imgPreview.style.display = 'block';
+        } else {
+          imgPreview.src = '';
+          imgPreview.style.display = 'none';
+        }
 
         // --- Llenar dinámicamente el select de categorías ---
         const select = document.getElementById('edit-producto-categoria');
+        // Limpiar opciones previas antes de añadir nuevas
+        select.innerHTML = '<option value="">Seleccionar...</option>'; // Añadir una opción por defecto
         select.innerHTML = '';
 
         categorias.forEach(c => {
@@ -439,20 +482,37 @@ document.addEventListener('DOMContentLoaded', async () => {
           select.appendChild(option);
         });
 
+        // --- Llenar dinámicamente el select de proveedores ---
+        const selectProveedor = document.getElementById('edit-producto-proveedor');
+        selectProveedor.innerHTML = '<option value="">Seleccionar...</option>'; // Añadir una opción por defecto
+        const provRes = await fetch('/api/admin/proveedores', { credentials: 'same-origin' });
+        if (!provRes.ok) throw new Error('No se pudieron obtener los proveedores');
+        const proveedores = await provRes.json();
+        proveedores.forEach(prov => {
+          const option = document.createElement('option');
+          option.value = prov.id_proveedor;
+          option.textContent = prov.nombre_proveedor;
+          if (p.id_proveedor === prov.id_proveedor) option.selected = true;
+          selectProveedor.appendChild(option);
+        });
+
         const form = document.getElementById('form-editar-producto');
         form.onsubmit = async e => {
           e.preventDefault();
 
-          const data = {
-            nombre_producto: document.getElementById('edit-producto-nombre').value,
-            id_categoria: document.getElementById('edit-producto-categoria').value
-          };
+          const formData = new FormData();
+          formData.append('nombre_producto', document.getElementById('edit-producto-nombre').value);
+          formData.append('id_categoria', document.getElementById('edit-producto-categoria').value);
+          formData.append('id_proveedor', document.getElementById('edit-producto-proveedor').value); // Añadir ID de proveedor
+          const imagenInput = document.getElementById('edit-producto-imagen');
+          if (imagenInput.files && imagenInput.files[0]) {
+            formData.append('imagen_producto', imagenInput.files[0]);
+          }
 
-          const resp = await fetch(`/api/admin/productos/${id}`, {
+          const resp = await fetch(`/api/admin/productos/${id}`, { // Cambiado data a formData
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify(data)
+            body: formData // Enviar FormData directamente
           });
 
           const result = await resp.json();
@@ -478,6 +538,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const p = await res.json();
 
         const modal = document.getElementById('modal-editar-proveedor');
+        setupModalCloseListeners(modal);
         modal.style.display = 'flex';
 
         document.getElementById('edit-proveedor-id').value = p.id_proveedor;
@@ -522,6 +583,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Modal de añadir proveedor
     async function openAddSupplierModal() {
     const modal = document.getElementById('modal-agregar-proveedor');
+    setupModalCloseListeners(modal);
     modal.style.display = 'flex';
 
     const form = document.getElementById('form-agregar-proveedor');
@@ -563,6 +625,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- Abrir modal para añadir producto ---
   async function openAddProductModal() {
     const modal = document.getElementById('modal-agregar-producto');
+    setupModalCloseListeners(modal);
     modal.style.display = 'flex';
 
     await cargarCategoriasSelect('nuevo-producto-categoria');
