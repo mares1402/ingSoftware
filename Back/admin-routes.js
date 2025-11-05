@@ -303,25 +303,45 @@ router.put('/productos/:id', isAuthenticated, isAdmin, upload.single('imagen_pro
 });
 
 // Eliminar producto
-router.delete('/productos/:id', async (req, res) => {
+router.delete('/productos/:id', isAuthenticated, isAdmin, async (req, res) => {
   const { id } = req.params;
+  let conn;
 
   try {
-    console.log(`Eliminando producto con ID: ${id}`);
+    conn = await conexion.promise().getConnection();
 
-    const [resultado] = await conexion.query(
-      'DELETE FROM Productos WHERE id_producto = ?',
-      [id]
-    );
+    // 1. Obtener la ruta de la imagen antes de borrar el producto
+    const [rows] = await conn.query('SELECT ruta_imagen FROM Productos WHERE id_producto = ?', [id]);
 
-    if (resultado.affectedRows === 0) {
-      return res.status(404).json({ error: 'Producto no encontrado' });
+    if (rows.length === 0) {
+      return res.status(404).json({ mensaje: 'Producto no encontrado' });
+    }
+
+    const rutaImagen = rows[0].ruta_imagen;
+
+    // 2. Eliminar el producto de la base de datos
+    const [deleteResult] = await conn.query('DELETE FROM Productos WHERE id_producto = ?', [id]);
+
+    if (deleteResult.affectedRows === 0) {
+      // Esto no debería pasar si la selección anterior funcionó, pero es una buena práctica
+      return res.status(404).json({ mensaje: 'Producto no encontrado al intentar eliminar' });
+    }
+
+    // 3. Si había una imagen, eliminar el archivo del servidor
+    if (rutaImagen) {
+      const imagePath = path.join(__dirname, '..', rutaImagen); // Construye la ruta absoluta
+      fs.unlink(imagePath, (err) => {
+        if (err) console.error(`Error al eliminar archivo de imagen ${imagePath}:`, err);
+        else console.log(`Archivo de imagen ${imagePath} eliminado.`);
+      });
     }
 
     res.json({ mensaje: 'Producto eliminado correctamente' });
   } catch (error) {
     console.error('Error al eliminar producto:', error);
     res.status(500).json({ error: 'Error al eliminar el producto' });
+  } finally {
+    if (conn) conn.release(); // Libera la conexión al pool
   }
 });
 
