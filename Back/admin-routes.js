@@ -81,7 +81,7 @@ router.delete('/usuarios/:id', isAuthenticated, isAdmin, (req, res) => {
 });
 
 // --- PRODUCTOS ---
-// === CARGAR PRODUCTOS DESDE EXCEL ===
+// === SUBIR PRODUCTOS DESDE EXCEL ===
 router.post('/productos/upload', isAuthenticated, isAdmin, upload.single('file'), (req, res) => {
   try {
     const workbook = XLSX.readFile(req.file.path);
