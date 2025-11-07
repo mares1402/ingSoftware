@@ -8,6 +8,27 @@
         <link rel="stylesheet" href="Font/index.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
         <link rel="icon" type="image/png" href="Font/imgs/mount logo.png">
+        <style>
+            /* Estilos para el botón de limpiar filtros */
+            .clear-filter-button {
+                width: 100%;
+                padding: 10px;
+                margin-top: 10px; /* Espacio entre los botones */
+                background-color: transparent;
+                color: #e74c3c; /* Un color rojo suave para indicar "limpiar" o "eliminar" */
+                border: 1px solid #e74c3c;
+                border-radius: 5px;
+                font-size: 1rem;
+                font-weight: bold;
+                cursor: pointer;
+                transition: background-color 0.3s, color 0.3s;
+            }
+
+            .clear-filter-button:hover {
+                background-color: #e74c3c;
+                color: #fff;
+            }
+        </style>
     </head>
     <body>
         <div class="top-bar">
@@ -65,6 +86,7 @@
                         </ul>
                     </div>
                     <button class="filter-button">Aplicar Filtros</button>
+                    <button class="clear-filter-button">Limpiar Filtros</button>
                 </aside>
                 <div class="products-area">
                     <h2 class="area-title">Nuestros Productos</h2>

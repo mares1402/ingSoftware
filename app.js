@@ -86,11 +86,11 @@ app.get('/api/productos', (req, res) => { // Modificado para aceptar filtros
   const conditions = [];
 
   if (categoria) {
-    conditions.push('c.id_categoria = ?');
+    conditions.push('c.id_categoria IN (?)');
     params.push(categoria);
   }
   if (marca) {
-    conditions.push('pr.id_proveedor = ?');
+    conditions.push('pr.id_proveedor IN (?)');
     params.push(marca);
   }
 

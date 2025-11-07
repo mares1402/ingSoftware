@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const categoryFilterList = document.getElementById('category-filter-list');
   const brandFilterList = document.getElementById('brand-filter-list');
   const applyFiltersBtn = document.querySelector('.filter-button');
+  const clearFiltersBtn = document.querySelector('.clear-filter-button');
 
   /**
    * Carga los productos desde la API y los muestra en la página.
@@ -90,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const li = document.createElement('li');
         li.innerHTML = `
           <label>
-            <input type="radio" name="${filterKey}" value="${item[idField]}">
+            <input type="checkbox" name="${filterKey}" value="${item[idField]}">
             ${item[nameField]}
           </label>
         `;
@@ -107,19 +108,34 @@ document.addEventListener('DOMContentLoaded', () => {
    * Aplica los filtros seleccionados y recarga los productos.
    */
   function aplicarFiltros() {
-    const selectedCategory = document.querySelector('input[name="categoria"]:checked');
-    const selectedBrand = document.querySelector('input[name="marca"]:checked');
+    const selectedCategories = Array.from(document.querySelectorAll('input[name="categoria"]:checked')).map(cb => cb.value);
+    const selectedBrands = Array.from(document.querySelectorAll('input[name="marca"]:checked')).map(cb => cb.value);
 
-    const filters = {};
-    if (selectedCategory) {
-      filters.categoria = selectedCategory.value;
-    }
-    if (selectedBrand) {
-      filters.marca = selectedBrand.value;
-    }
+    const params = new URLSearchParams();
+    selectedCategories.forEach(cat => params.append('categoria', cat));
+    selectedBrands.forEach(brand => params.append('marca', brand));
 
-    cargarProductos(filters);
+    // La función cargarProductos ya sabe cómo manejar los parámetros de la URL
+    cargarProductos(params);
   }
+
+  /**
+   * Limpia todos los filtros seleccionados y recarga todos los productos.
+   */
+  function limpiarFiltros() {
+    // Desmarcar todos los checkboxes
+    const checkboxes = document.querySelectorAll('.filter-sidebar input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+      cb.checked = false;
+    });
+
+    // Cargar productos sin filtros
+    cargarProductos();
+  }
+
+
+
+
 
   /**
    * Verifica si hay un usuario con sesión iniciada y actualiza la UI.
@@ -192,6 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Lógica de Filtros ---
   if (applyFiltersBtn) {
     applyFiltersBtn.addEventListener('click', aplicarFiltros);
+  }
+
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', limpiarFiltros);
   }
 
   // --- Cargas Iniciales ---
