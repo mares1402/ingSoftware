@@ -300,6 +300,24 @@ hr { border:0; border-top:1px solid #eee; }
   background-color: #1a6eff;
 }
 
+.btn-upload-excel {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #1D6F42; /* Color verde para Excel */
+  color: white;
+  transition: background-color 0.2s;
+}
+
+.btn-upload-excel:hover {
+  background-color: #145A32; /* Verde más oscuro al pasar el cursor */
+}
+
 /* === Estilos para Tablas de Admin === */
 .admin-table {
   width: 100%;
@@ -426,4 +444,41 @@ hr { border:0; border-top:1px solid #eee; }
   border: 1px solid #f0f0f0;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* === Estilos para Notificaciones (Toast) === */
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 8px;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  z-index: 2000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  opacity: 0;
+  transform: translateX(120%);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.toast-notification.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toast-notification.exito {
+  background-color: #28a745; /* Verde éxito */
+}
+
+.toast-notification.error {
+  background-color: #dc3545; /* Rojo error */
+}
+
+.toast-notification.info {
+  background-color: #17a2b8; /* Azul info */
 }

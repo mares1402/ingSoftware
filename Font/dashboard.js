@@ -2,6 +2,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Evitar cache al usar "Atrás"
   window.addEventListener('pageshow', e => { if (e.persisted) window.location.reload(); });
 
+  /**
+   * Muestra una notificación flotante (toast) en la esquina superior derecha.
+   * @param {string} mensaje El texto que se mostrará en la notificación.
+   * @param {string} [tipo='error'] El tipo de notificación ('error' o 'exito').
+   */
+  function mostrarNotificacion(mensaje, tipo = 'error') {
+    const notificacion = document.createElement('div');
+    notificacion.textContent = mensaje;
+    notificacion.className = `toast-notification ${tipo}`;
+    
+    // Añadir icono
+    const icon = document.createElement('i');
+    icon.className = tipo === 'exito' ? 'fa-solid fa-check-circle' : 'fa-solid fa-exclamation-circle';
+    notificacion.prepend(icon);
+
+    document.body.appendChild(notificacion);
+
+    // Animar entrada y salida
+    setTimeout(() => notificacion.classList.add('show'), 10);
+    setTimeout(() => {
+      notificacion.classList.remove('show');
+      notificacion.addEventListener('transitionend', () => notificacion.remove());
+    }, 4000);
+  }
+
   try {
     // --- Obtener datos del usuario ---
     const res = await fetch('/me', { credentials: 'same-origin' });
@@ -71,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (section === 'admin-suppliers.html') loadProveedores();
           // Aquí podrías añadir la carga de datos para las cotizaciones en el futuro
         } catch (err) {
-          contentArea.innerHTML = `<p>Error cargando el panel: ${err.message}</p>`;
+          mostrarNotificacion(`Error cargando el panel: ${err.message}`, 'error');
           console.error(err);
         }
       }
@@ -249,14 +274,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 if (!res.ok) throw new Error('No se pudo eliminar el usuario');
                 loadUsuarios();
+                mostrarNotificacion('Usuario eliminado correctamente.', 'exito');
               } catch (err) {
                 console.error(err);
-                alert('Error al eliminar usuario.');
+                mostrarNotificacion('Error al eliminar el usuario.', 'error');
               }
             }
           });
         });
-
       } catch (err) {
         console.error(err);
         alert('Error cargando usuarios: ' + err.message);
@@ -310,14 +335,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 method: 'DELETE',
                 credentials: 'same-origin'
               });
+              mostrarNotificacion('Producto eliminado correctamente.', 'exito');
               loadProductos();
             }
           });
         });
 
       } catch (err) {
-        console.error(err);
-        alert('Error cargando productos: ' + err.message);
+        console.error('Error al cargar productos:', err);
+        mostrarNotificacion('Error al cargar productos: ' + err.message, 'error');
       }
     }
     
@@ -361,6 +387,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 method: 'DELETE',
                 credentials: 'same-origin'
               });
+              mostrarNotificacion('Proveedor eliminado correctamente.', 'exito');
               loadProveedores();
             }
           });
@@ -372,8 +399,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           btnAdd.addEventListener('click', () => openAddSupplierModal());
         }
       } catch (err) {
-        console.error(err);
-        alert('Error cargando proveedores: ' + err.message);
+        console.error('Error al cargar proveedores:', err);
+        mostrarNotificacion('Error cargando proveedores: ' + err.message, 'error');
       }
     }
 
@@ -427,21 +454,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log("Respuesta del backend:", result);
 
             if (res.ok) {
-              alert('✅ Usuario modificado correctamente');
+              mostrarNotificacion('Usuario modificado correctamente.', 'exito');
               modal.style.display = 'none';
               loadUsuarios();
             } else {
-              alert('❌ Error al actualizar usuario: ' + (result.mensaje || 'Error desconocido'));
+              mostrarNotificacion('Error al actualizar usuario: ' + (result.mensaje || 'Error desconocido'), 'error');
             }
           } catch (err) {
             console.error(err);
-            alert('❌ Error inesperado al actualizar usuario: ' + err.message);
+            mostrarNotificacion('Error inesperado al actualizar usuario: ' + err.message, 'error');
           }
         };
 
       } catch (err) {
         console.error(err);
-        alert('Error al cargar datos del usuario.');
+        mostrarNotificacion('Error al cargar datos del usuario.', 'error');
       }
     }
 
@@ -525,16 +552,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           const result = await resp.json();
           if (resp.ok) {
-            alert('✅ Producto actualizado correctamente');
+            mostrarNotificacion('Producto actualizado correctamente.', 'exito');
             modal.style.display = 'none';
             loadProductos();
           } else {
-            alert('❌ Error al actualizar producto: ' + (result.mensaje || 'Error desconocido'));
+            mostrarNotificacion('Error al actualizar producto: ' + (result.mensaje || 'Error desconocido'), 'error');
           }
         };
       } catch (err) {
-        console.error(err);
-        alert('Error al cargar datos del producto.');
+        console.error('Error al cargar datos del producto:', err);
+        mostrarNotificacion('Error al cargar datos del producto.', 'error');
       }
     }
 
@@ -575,16 +602,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           const result = await resp.json();
           if (resp.ok) {
-            alert('✅ Proveedor actualizado correctamente');
+            mostrarNotificacion('Proveedor actualizado correctamente.', 'exito');
             modal.style.display = 'none';
             loadProveedores();
           } else {
-            alert('❌ Error al actualizar proveedor: ' + (result.mensaje || 'Error desconocido'));
+            mostrarNotificacion('Error al actualizar proveedor: ' + (result.mensaje || 'Error desconocido'), 'error');
           }
         };
       } catch (err) {
-        console.error(err);
-        alert('Error al cargar datos del proveedor.');
+        console.error('Error al cargar datos del proveedor:', err);
+        mostrarNotificacion('Error al cargar datos del proveedor.', 'error');
       }
     }
 
@@ -617,15 +644,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const result = await res.json();
         if (res.ok) {
-          alert('✅ Proveedor agregado correctamente');
+          mostrarNotificacion('Proveedor agregado correctamente.', 'exito');
           modal.style.display = 'none';
           loadProveedores();
         } else {
-          alert('❌ Error al agregar proveedor: ' + (result.mensaje || 'Error desconocido'));
+          mostrarNotificacion('Error al agregar proveedor: ' + (result.mensaje || 'Error desconocido'), 'error');
         }
       } catch (err) {
         console.error(err);
-        alert('Error al agregar proveedor: ' + err.message);
+        mostrarNotificacion('Error al agregar proveedor: ' + err.message, 'error');
       }
     };
   }
@@ -663,15 +690,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const result = await res.json();
         if (res.ok) {
-          alert('✅ Producto agregado correctamente');
+          mostrarNotificacion('Producto agregado correctamente.', 'exito');
           modal.style.display = 'none';
           loadProductos();
         } else {
-          alert('❌ Error al agregar producto: ' + (result.mensaje || 'Error desconocido'));
+          mostrarNotificacion('Error al agregar producto: ' + (result.mensaje || 'Error desconocido'), 'error');
         }
       } catch (err) {
         console.error(err);
-        alert('Error al agregar producto: ' + err.message);
+        mostrarNotificacion('Error al agregar producto: ' + err.message, 'error');
       }
     };
   }
@@ -695,10 +722,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         credentials: 'same-origin'
       });
       const data = await res.json();
-      alert(data.mensaje);
+      mostrarNotificacion(data.mensaje, res.ok ? 'exito' : 'error');
       loadProductos();
     } catch (err) {
       console.error('Error al subir Excel de productos:', err);
+      mostrarNotificacion('Error al subir Excel de productos.', 'error');
     }
   }
 
@@ -714,16 +742,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         credentials: 'same-origin'
       });
       const data = await res.json();
-      alert(data.mensaje);
+      mostrarNotificacion(data.mensaje, res.ok ? 'exito' : 'error');
       loadProveedores();
     } catch (err) {
       console.error('Error al subir Excel de proveedores:', err);
+      mostrarNotificacion('Error al subir Excel de proveedores.', 'error');
     }
   }
 
     // Botones generales
     document.getElementById('btnEdit').addEventListener('click', () => {
-      alert('Aquí iría la edición de perfil.');
+      mostrarNotificacion('La edición de perfil se implementará pronto.', 'info');
     });
 
     const logoutFunction = async (e) => {
