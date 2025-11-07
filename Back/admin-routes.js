@@ -255,6 +255,86 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
   });
 
   // Actualizar producto y su proveedor
+  router.put('/productos/:id', isAuthenticated, isAdmin, uploadProductImage.single('imagen_producto'), async (req, res) => {
+    const { id } = req.params;
+    const { nombre_producto, id_categoria, id_proveedor, remove_image } = req.body;
+    let conn;
+
+    try {
+      conn = await conexion.promise().getConnection();
+      await conn.beginTransaction();
+
+      // 1. Obtener la ruta de la imagen actual para poder borrarla si es necesario
+      const [rows] = await conn.query('SELECT ruta_imagen FROM Productos WHERE id_producto = ?', [id]);
+      const oldImagePath = rows.length > 0 ? rows[0].ruta_imagen : null;
+
+      let newImagePath = oldImagePath; // Por defecto, mantenemos la imagen actual
+
+      // Caso A: Se sube una nueva imagen
+      if (req.file) {
+        newImagePath = `/uploads/products/${req.file.filename}`;
+        // Si había una imagen antigua, la borramos del servidor
+        if (oldImagePath) {
+          const fullOldPath = path.join(__dirname, '..', oldImagePath);
+          fs.unlink(fullOldPath, (err) => {
+            if (err) console.error(`Error al eliminar imagen antigua ${fullOldPath}:`, err);
+          });
+        }
+      }
+      // Caso B: Se pide explícitamente quitar la imagen
+      else if (remove_image === 'true') {
+        newImagePath = null;
+        // Si había una imagen, la borramos del servidor
+        if (oldImagePath) {
+          const fullOldPath = path.join(__dirname, '..', oldImagePath);
+          fs.unlink(fullOldPath, (err) => {
+            if (err) console.error(`Error al eliminar imagen ${fullOldPath}:`, err);
+          });
+        }
+      }
+
+      // 2. Actualizar la tabla de Productos
+      await conn.query(
+        'UPDATE Productos SET nombre_producto = ?, id_categoria = ?, ruta_imagen = ? WHERE id_producto = ?',
+        [nombre_producto, id_categoria, newImagePath, id]
+      );
+
+      // 3. Actualizar la tabla de asociación ProductoProveedor
+      // Usamos un INSERT ... ON DUPLICATE KEY UPDATE para manejar tanto creación como actualización
+      await conn.query(
+        `INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE id_proveedor = VALUES(id_proveedor)`,
+        [id, id_proveedor]
+      );
+
+      // 4. Confirmar la transacción
+      await conn.commit();
+
+      res.json({ mensaje: 'Producto actualizado correctamente' });
+
+    } catch (error) {
+      // Si algo falla, revertimos todos los cambios
+      if (conn) await conn.rollback();
+
+      // Si falló, pero se subió un archivo, lo borramos para no dejar basura
+      if (req.file) {
+        const tempPath = path.join(__dirname, '..', `/uploads/products/${req.file.filename}`);
+        fs.unlink(tempPath, (err) => {
+          if (err) console.error(`Error al limpiar archivo temporal ${tempPath}:`, err);
+        });
+      }
+
+      console.error('Error al actualizar producto:', error);
+      res.status(500).json({ mensaje: 'Error en el servidor al actualizar el producto', error: error.message });
+
+    } finally {
+      // Liberar la conexión en cualquier caso
+      if (conn) conn.release();
+    }
+  });
+
+/*
+  // Actualizar producto y su proveedor
   router.put('/productos/:id', isAuthenticated, isAdmin, uploadProductImage.single('imagen_producto'), (req, res) => { // Con subida de imagen
     const { id } = req.params;
     const { nombre_producto, id_categoria, id_proveedor } = req.body;
@@ -359,6 +439,7 @@ router.delete('/productos/:id', isAuthenticated, isAdmin, async (req, res) => {
     if (conn) conn.release(); // Libera la conexión al pool
   }
 });
+*/
 
 // --- PROVEEDORES ---
 // === CARGAR PROVEEDORES DESDE EXCEL ===
