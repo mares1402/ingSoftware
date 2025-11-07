@@ -486,6 +486,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!catRes.ok) throw new Error('No se pudieron obtener las categorías');
         const categorias = await catRes.json();
 
+      // Añadir el texto informativo de formatos
+      addFormatHint('edit-producto-imagen');
+
         const modal = document.getElementById('modal-editar-producto');
         setupModalCloseListeners(modal);
         modal.style.display = 'flex';
@@ -657,6 +660,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
+  /**
+   * Añade un texto informativo sobre los formatos de archivo permitidos junto a un input de tipo file.
+   * @param {string} inputId El ID del elemento input file.
+   */
+  function addFormatHint(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input || !input.parentElement) return;
+
+    // Eliminar el texto anterior si ya existe para evitar duplicados
+    const existingHint = input.parentElement.querySelector('.format-hint');
+    if (existingHint) existingHint.remove();
+
+    const hint = document.createElement('span');
+    hint.className = 'format-hint';
+    hint.textContent = 'Formatos: JPG, PNG, GIF, WEBP';
+    input.insertAdjacentElement('afterend', hint);
+  }
+
   // --- Abrir modal para añadir producto ---
   async function openAddProductModal() {
     const modal = document.getElementById('modal-agregar-producto');
@@ -665,6 +686,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await cargarCategoriasSelect('nuevo-producto-categoria');
     await cargarProveedoresSelect('nuevo-producto-proveedor');
+
+    // Añadir el texto informativo de formatos
+    addFormatHint('nuevo-producto-imagen');
 
     const form = document.getElementById('form-agregar-producto');
     form.onsubmit = async e => {
@@ -698,17 +722,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       } catch (err) {
         console.error(err);
-        mostrarNotificacion('Error al agregar producto: ' + err.message, 'error');
+        // Captura específica para el error de formato de archivo
+        if (err.message.includes('Formato de archivo no válido')) {
+          mostrarNotificacion('Formato de archivo no válido. Solo se permiten imágenes.', 'error');
+        } else {
+          mostrarNotificacion('Error al agregar producto: ' + err.message, 'error');
+        }
       }
     };
   }
-
-  // --- Escuchar el botón de añadir producto ---
-  document.addEventListener('click', e => {
-    if (e.target.closest('.btn-add-new')) {
-      openAddProductModal();
-    }
-  });
 
   // --- Añadir productos desde excel ---
   window.subirExcelProductos = async function (file) {
@@ -749,6 +771,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       mostrarNotificacion('Error al subir Excel de proveedores.', 'error');
     }
   }
+
+    // --- Delegación de eventos para botones dinámicos ---
+    // Esto asegura que los botones funcionen incluso si se recargan con el contenido.
+    contentArea.addEventListener('click', e => {
+      const addProductBtn = e.target.closest('.btn-add-new');
+      if (addProductBtn) {
+        e.preventDefault();
+        openAddProductModal();
+      }
+    });
 
     // Botones generales
     document.getElementById('btnEdit').addEventListener('click', () => {

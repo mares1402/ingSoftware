@@ -38,7 +38,17 @@ const productStorage = multer.diskStorage({
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
-const uploadProductImage = multer({ storage: productStorage }); // Middleware para subir imágenes de productos
+
+// Filtro para aceptar solo archivos de imagen
+const imageFileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true); // Aceptar el archivo
+  } else {
+    cb(new Error('Formato de archivo no válido. Solo se permiten imágenes.'), false); // Rechazar el archivo
+  }
+};
+
+const uploadProductImage = multer({ storage: productStorage, fileFilter: imageFileFilter }); // Middleware para subir imágenes de productos
 
 // --- Middlewares de control de acceso ---
 function isAuthenticated(req, res, next) {

@@ -482,3 +482,37 @@ hr { border:0; border-top:1px solid #eee; }
 .toast-notification.info {
   background-color: #17a2b8; /* Azul info */
 }
+
+/* === Estilos para el botón de subir archivo === */
+/* Ocultamos el texto por defecto de "Ningún archivo seleccionado" */
+input[type="file"] {
+  color: transparent;
+}
+
+/* Estilo para el botón real */
+input[type="file"]::file-selector-button {
+  /* Apariencia de botón */
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background-color: #e9f2ff; /* Un azul muy claro */
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 16px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* Efecto al pasar el cursor */
+input[type="file"]::file-selector-button:hover {
+  background-color: var(--accent);
+  color: white;
+}
+
+/* Estilo para el texto informativo de formatos de archivo */
+.format-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-left: 10px;
+  vertical-align: middle;
+}

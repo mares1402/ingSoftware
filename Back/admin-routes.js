@@ -259,50 +259,61 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
     const { id } = req.params;
     const { nombre_producto, id_categoria, id_proveedor } = req.body;
 
-    conexion.beginTransaction(err => {
-      if (err) {
-        return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
-      }
+    // Obtener una conexión del pool
+    conexion.getConnection((err, conn) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
 
-      conexion.query(
-        // Actualizamos la ruta de la imagen solo si se subió una nueva
-        `UPDATE Productos SET nombre_producto=?, id_categoria=? ${req.file ? ', ruta_imagen=?' : ''} WHERE id_producto=?`,
-        [
-          nombre_producto,
-          id_categoria,
-          ...(req.file ? [`/uploads/products/${req.file.filename}`] : []), // Añadimos la ruta si existe
-          id
-        ],
-        (err) => {
-          if (err) {
-            return conexion.rollback(() => {
-              res.status(500).json({ mensaje: 'Error al actualizar producto', error: err });
-            });
-          }
+      conn.beginTransaction(err => {
+        if (err) {
+          conn.release();
+          return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
+        }
 
-          // Actualizar proveedor asociado
-          conexion.query(
-            'UPDATE ProductoProveedor SET id_proveedor=? WHERE id_producto=?',
-            [id_proveedor, id],
-            (err, result) => {
-              if (err) {
-                return conexion.rollback(() => {
-                  res.status(500).json({ mensaje: 'Error al actualizar proveedor del producto', error: err });
-                });
-              }
-
-              conexion.commit(err => {
-                if (err) {
-                  return conexion.rollback(() => {
-                    res.status(500).json({ mensaje: 'Error al confirmar cambios', error: err });
-                  });
-                }
-                res.json({ mensaje: 'Producto actualizado correctamente' });
+        // 1. Actualizar la tabla de Productos
+        conn.query(
+          `UPDATE Productos SET nombre_producto=?, id_categoria=? ${req.file ? ', ruta_imagen=?' : ''} WHERE id_producto=?`,
+          [
+            nombre_producto,
+            id_categoria,
+            ...(req.file ? [`/uploads/products/${req.file.filename}`] : []),
+            id
+          ],
+          (err) => {
+            if (err) {
+              return conn.rollback(() => {
+                conn.release();
+                res.status(500).json({ mensaje: 'Error al actualizar producto', error: err });
               });
             }
-          );
-        }
-      );
+
+            // 2. Actualizar la tabla de asociación ProductoProveedor
+            conn.query(
+              'UPDATE ProductoProveedor SET id_proveedor=? WHERE id_producto=?',
+              [id_proveedor, id],
+              (err) => {
+                if (err) {
+                  return conn.rollback(() => {
+                    conn.release();
+                    res.status(500).json({ mensaje: 'Error al actualizar proveedor del producto', error: err });
+                  });
+                }
+
+                // 3. Confirmar la transacción
+                conn.commit(err => {
+                  if (err) {
+                    return conn.rollback(() => {
+                      conn.release();
+                      res.status(500).json({ mensaje: 'Error al confirmar cambios', error: err });
+                    });
+                  }
+                  conn.release();
+                  res.json({ mensaje: 'Producto actualizado correctamente' });
+                });
+              }
+            );
+          }
+        );
+      });
     });
   });
 
