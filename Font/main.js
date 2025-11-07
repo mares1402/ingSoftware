@@ -181,6 +181,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (error) {
       console.error("Error verificando sesión:", error);
+      // En caso de error (ej. servidor caído), mostrar los botones de login por defecto
+      userActionsContainer.innerHTML = `
+        <a href="Font/login.html" class="login-link">Iniciar sesión</a>
+        <span class="separator">|</span>
+        <a href="Font/signup.html" class="login-link">Registrarse</a>
+      `;
     }
   }
 
