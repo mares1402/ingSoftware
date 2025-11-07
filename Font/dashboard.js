@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 4000);
   }
 
+  // --- OPTIMIZACIÓN: Caché para datos que no cambian a menudo ---
+  let cachedCategories = null;
+  let cachedSuppliers = null;
+
   try {
     // --- Obtener datos del usuario ---
     const res = await fetch('/me', { credentials: 'same-origin' });
@@ -95,6 +99,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (section === 'admin-products.html') loadProductos();
           if (section === 'admin-suppliers.html') loadProveedores();
           // Aquí podrías añadir la carga de datos para las cotizaciones en el futuro
+
+          // Configurar listener para el input de Excel
+          setupFileInputListener('excelProductos', 'excel-productos-filename');
+
         } catch (err) {
           mostrarNotificacion(`Error cargando el panel: ${err.message}`, 'error');
           console.error(err);
@@ -184,64 +192,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // --- Cargar categorías en el select ---
-    async function cargarCategoriasSelect(selectId) {
-      const res = await fetch('/api/admin/listado-categorias', {
-        method: 'GET',
-        credentials: 'same-origin'
-      });
-      const cats = await res.json();
+    async function cargarCategoriasSelect(selectId, selectedId = null) {
+      if (!cachedCategories) {
+        const res = await fetch('/api/admin/listado-categorias', { credentials: 'same-origin' });
+        cachedCategories = await res.json();
+      }
       const select = document.getElementById(selectId);
       select.innerHTML = '<option value="">Seleccionar...</option>';
-      cats.forEach(c => {
+      cachedCategories.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c.id_categoria;
         opt.textContent = c.nombre_categoria;
+        if (c.id_categoria == selectedId) opt.selected = true;
         select.appendChild(opt);
       });
     }
 
     // --- Cargar proveedores en el select ---
-    async function cargarProveedoresSelect(selectId) {
+    async function cargarProveedoresSelect(selectId, selectedId = null) {
       try {
-        const res = await fetch('/api/admin/proveedores', {
-          method: 'GET',
-          credentials: 'same-origin'
-        });
-        const proveedores = await res.json();
-
+        if (!cachedSuppliers) {
+          const res = await fetch('/api/admin/proveedores', { credentials: 'same-origin' });
+          cachedSuppliers = await res.json();
+        }
         const select = document.getElementById(selectId);
         select.innerHTML = '<option value="">Seleccione un proveedor</option>';
-
-        proveedores.forEach(proveedor => {
+        cachedSuppliers.forEach(proveedor => {
           const option = document.createElement('option');
           option.value = proveedor.id_proveedor;
           option.textContent = proveedor.nombre_proveedor;
+          if (proveedor.id_proveedor == selectedId) option.selected = true;
           select.appendChild(option);
         });
       } catch (err) {
         console.error('Error al cargar proveedores:', err);
-        const select = document.getElementById(selectId);
-        select.innerHTML = '<option value="">Error al cargar proveedores</option>';
+        document.getElementById(selectId).innerHTML = '<option value="">Error al cargar</option>';
       }
     }
 
     // --- Función para cargar usuarios ---
     async function loadUsuarios() {
       try {
-        // Cargar el HTML del modal de edición de usuario
-        await loadModal('modal-editar-usuario.html');
-
         const res = await fetch('/api/admin/usuarios', { credentials: 'same-origin' });
         if (!res.ok) throw new Error('No se pudieron obtener los usuarios');
         const usuarios = await res.json();
 
         const tbody = document.querySelector('#usersTable tbody');
         if (!tbody) return;
-        tbody.innerHTML = '';
 
-        usuarios.forEach(u => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
+        // --- OPTIMIZACIÓN: Construir HTML y añadirlo una sola vez ---
+        tbody.innerHTML = usuarios.map(u => `
+          <tr>
             <td>${u.id_usuario}</td>
             <td>${u.nombre}</td>
             <td>${u.paterno}</td>
@@ -254,37 +255,32 @@ document.addEventListener('DOMContentLoaded', async () => {
               <button class="btn-edit-user" data-id="${u.id_usuario}"><i class="fa-solid fa-pen"></i></button>
               <button class="btn-delete-user" data-id="${u.id_usuario}"><i class="fa-solid fa-trash"></i></button>
             </td>
-          `;
-          tbody.appendChild(tr);
-        });
+          </tr>
+        `).join('');
 
-        // Abrir modal de edición
-        tbody.querySelectorAll('.btn-edit-user').forEach(btn => {
-          btn.addEventListener('click', () => openEditUserModal(btn.dataset.id));
-        });
+        // --- OPTIMIZACIÓN: Delegación de eventos ---
+        tbody.onclick = async (e) => {
+          const editBtn = e.target.closest('.btn-edit-user');
+          const deleteBtn = e.target.closest('.btn-delete-user');
 
-        // Eliminar usuario
-        tbody.querySelectorAll('.btn-delete-user').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            if (confirm('¿Seguro que deseas eliminar este usuario?')) {
-              try {
-                const res = await fetch(`/api/admin/usuarios/${btn.dataset.id}`, { 
-                  method: 'DELETE', 
-                  credentials: 'same-origin' 
-                });
-                if (!res.ok) throw new Error('No se pudo eliminar el usuario');
-                loadUsuarios();
-                mostrarNotificacion('Usuario eliminado correctamente.', 'exito');
-              } catch (err) {
-                console.error(err);
-                mostrarNotificacion('Error al eliminar el usuario.', 'error');
-              }
+          if (editBtn) {
+            openEditUserModal(editBtn.dataset.id);
+          } else if (deleteBtn) {
+            if (!confirm('¿Seguro que deseas eliminar este usuario?')) return;
+            try {
+              const res = await fetch(`/api/admin/usuarios/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+              if (!res.ok) throw new Error('No se pudo eliminar el usuario');
+              loadUsuarios();
+              mostrarNotificacion('Usuario eliminado correctamente.', 'exito');
+            } catch (err) {
+              console.error(err);
+              mostrarNotificacion('Error al eliminar el usuario.', 'error');
             }
-          });
-        });
+          }
+        };
       } catch (err) {
         console.error(err);
-        alert('Error cargando usuarios: ' + err.message);
+        mostrarNotificacion('Error cargando usuarios: ' + err.message, 'error');
       }
     }
 
@@ -299,12 +295,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const tablaBody = document.querySelector('#productsTable tbody');
       if (!tablaBody) throw new Error('No se encontró la tabla de productos en el DOM');
 
-      // Limpiar filas existentes
-      tablaBody.innerHTML = '';
-
-      productos.forEach(p => {
-        const fila = document.createElement('tr');
-        fila.innerHTML = `
+      // --- OPTIMIZACIÓN: Construir HTML y añadirlo una sola vez ---
+      tablaBody.innerHTML = productos.map(p => `
+        <tr>
           <td>${p.id_producto}</td>
           <td>${p.nombre_producto}</td>
           <td>${p.ruta_imagen ? `<img src="${p.ruta_imagen}" alt="Imagen" style="width: 50px; height: 50px; object-fit: cover;">` : 'No imagen'}</td>
@@ -318,29 +311,23 @@ document.addEventListener('DOMContentLoaded', async () => {
               <i class="fa-solid fa-trash"></i>
             </button>
           </td>
-        `;
-        tablaBody.appendChild(fila);
-      });
+        </tr>
+      `).join('');
 
-        // --- Botón editar ---
-        tablaBody.querySelectorAll('.btn-edit-product').forEach(btn => {
-          btn.addEventListener('click', () => openEditProductModal(btn.dataset.id));
-        });
+      // --- OPTIMIZACIÓN: Delegación de eventos ---
+      tablaBody.onclick = async (e) => {
+        const editBtn = e.target.closest('.btn-edit-product');
+        const deleteBtn = e.target.closest('.btn-delete-product');
 
-        // --- Botón eliminar ---
-        tablaBody.querySelectorAll('.btn-delete-product').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            if (confirm('¿Seguro que deseas eliminar este producto?')) {
-              await fetch(`/api/admin/productos/${btn.dataset.id}`, {
-                method: 'DELETE',
-                credentials: 'same-origin'
-              });
-              mostrarNotificacion('Producto eliminado correctamente.', 'exito');
-              loadProductos();
-            }
-          });
-        });
-
+        if (editBtn) {
+          openEditProductModal(editBtn.dataset.id);
+        } else if (deleteBtn) {
+          if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
+          await fetch(`/api/admin/productos/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+          mostrarNotificacion('Producto eliminado correctamente.', 'exito');
+          loadProductos();
+        }
+      };
       } catch (err) {
         console.error('Error al cargar productos:', err);
         mostrarNotificacion('Error al cargar productos: ' + err.message, 'error');
@@ -356,11 +343,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const tbody = document.querySelector('#suppliersTable tbody');
         if (!tbody) return;
-        tbody.innerHTML = '';
-
-        proveedores.forEach(p => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
+        
+        // --- OPTIMIZACIÓN: Construir HTML y añadirlo una sola vez ---
+        tbody.innerHTML = proveedores.map(p => `
+          <tr>
             <td>${p.id_proveedor}</td>
             <td>${p.nombre_proveedor}</td>
             <td>${p.telefono || '-'}</td>
@@ -370,34 +356,25 @@ document.addEventListener('DOMContentLoaded', async () => {
               <button class="btn-edit-supplier" data-id="${p.id_proveedor}"><i class="fa-solid fa-pen"></i></button>
               <button class="btn-delete-supplier" data-id="${p.id_proveedor}"><i class="fa-solid fa-trash"></i></button>
             </td>
-          `;
-          tbody.appendChild(tr);
-        });
+          </tr>
+        `).join('');
 
-        // --- Botón editar ---
-        tbody.querySelectorAll('.btn-edit-supplier').forEach(btn => {
-          btn.addEventListener('click', () => openEditSupplierModal(btn.dataset.id));
-        });
+        // --- OPTIMIZACIÓN: Delegación de eventos ---
+        tbody.onclick = async (e) => {
+          const editBtn = e.target.closest('.btn-edit-supplier');
+          const deleteBtn = e.target.closest('.btn-delete-supplier');
 
-        // --- Botón eliminar ---
-        tbody.querySelectorAll('.btn-delete-supplier').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            if (confirm('¿Seguro que deseas eliminar este proveedor?')) {
-              await fetch(`/api/admin/proveedores/${btn.dataset.id}`, {
-                method: 'DELETE',
-                credentials: 'same-origin'
-              });
-              mostrarNotificacion('Proveedor eliminado correctamente.', 'exito');
-              loadProveedores();
-            }
-          });
-        });
-
-        // --- 🆕 Botón agregar ---
-        const btnAdd = document.querySelector('.btn-add-new');
-        if (btnAdd) {
-          btnAdd.addEventListener('click', () => openAddSupplierModal());
-        }
+          if (editBtn) {
+            openEditSupplierModal(editBtn.dataset.id);
+          } else if (deleteBtn) {
+            if (!confirm('¿Seguro que deseas eliminar este proveedor?')) return;
+            await fetch(`/api/admin/proveedores/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+            // Invalidar caché de proveedores para que se recargue la próxima vez
+            cachedSuppliers = null;
+            mostrarNotificacion('Proveedor eliminado correctamente.', 'exito');
+            loadProveedores();
+          }
+        };
       } catch (err) {
         console.error('Error al cargar proveedores:', err);
         mostrarNotificacion('Error cargando proveedores: ' + err.message, 'error');
@@ -407,6 +384,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Función para abrir modal de usuario ---
     async function openEditUserModal(id) {
       try {
+        // Cargar el HTML del modal de edición de usuario si no existe
+        if (!document.getElementById('modal-editar-usuario')) {
+          await loadModal('modal-editar-usuario.html');
+        }
+
         const res = await fetch(`/api/admin/usuarios/${id}`, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Usuario no encontrado');
         const u = await res.json();
@@ -475,19 +457,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Abrir modal de edición de producto ---
     async function openEditProductModal(id) {
       try {
-        await cargarCategoriasSelect('nuevo-producto-categoria');
-        await cargarProveedoresSelect('nuevo-producto-proveedor');
+        // Limpiar el input de archivo y el texto del nombre de archivo anterior
+        const imagenInput = document.getElementById('edit-producto-imagen');
+        if (imagenInput) imagenInput.value = ''; // Resetea el selector de archivo
+        const fileNameDisplay = document.getElementById('edit-producto-filename');
+        if (fileNameDisplay) fileNameDisplay.textContent = ''; // Limpia el texto del nombre
+        // --- FIN DE LA CORRECCIÓN ---
+
         const res = await fetch(`/api/admin/productos/${id}`, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Producto no encontrado');
         const p = await res.json();
 
-        // Obtener categorías dinámicamente (usando la nueva ruta)
-        const catRes = await fetch('/api/admin/listado-categorias', { credentials: 'same-origin' });
-        if (!catRes.ok) throw new Error('No se pudieron obtener las categorías');
-        const categorias = await catRes.json();
-
       // Añadir el texto informativo de formatos
       addFormatHint('edit-producto-imagen');
+      // Configurar el listener para mostrar el nombre del archivo de imagen
+      setupFileInputListener('edit-producto-imagen', 'edit-producto-filename');
 
         const modal = document.getElementById('modal-editar-producto');
         setupModalCloseListeners(modal);
@@ -496,43 +480,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('edit-producto-id').value = p.id_producto;
         document.getElementById('edit-producto-nombre').value = p.nombre_producto;        
 
-        // Mostrar imagen actual
+        // --- Lógica de la imagen ---
+        const imgContainer = document.getElementById('edit-imagen-container');
         const imgPreview = document.getElementById('edit-imagen-preview');
+        const removeImgBtn = document.getElementById('btn-remove-image');
+        let removeImageFlag = false; // Flag para saber si se debe eliminar la imagen
+
+        // Mostrar imagen actual
         if (p.ruta_imagen) {
           imgPreview.src = p.ruta_imagen;
-          imgPreview.style.display = 'block';
+          imgContainer.style.display = 'block';
+          removeImageFlag = false;
         } else {
-          imgPreview.src = '';
-          imgPreview.style.display = 'none';
+          imgContainer.style.display = 'none';
         }
 
-        // --- Llenar dinámicamente el select de categorías ---
-        const select = document.getElementById('edit-producto-categoria');
-        // Limpiar opciones previas antes de añadir nuevas
-        select.innerHTML = '<option value="">Seleccionar...</option>'; // Añadir una opción por defecto
-        select.innerHTML = '';
+        // Evento para el botón de quitar imagen
+        removeImgBtn.onclick = () => {
+          imgContainer.style.display = 'none';
+          imagenInput.value = ''; // Limpiar el input file
+          removeImageFlag = true; // Marcar para eliminación en el backend
+        };
 
-        categorias.forEach(c => {
-          const option = document.createElement('option');
-          option.value = c.id_categoria;
-          option.textContent = c.nombre_categoria;
-          if (p.id_categoria === c.id_categoria) option.selected = true;
-          select.appendChild(option);
-        });
-
-        // --- Llenar dinámicamente el select de proveedores ---
-        const selectProveedor = document.getElementById('edit-producto-proveedor');
-        selectProveedor.innerHTML = '<option value="">Seleccionar...</option>'; // Añadir una opción por defecto
-        const provRes = await fetch('/api/admin/proveedores', { credentials: 'same-origin' });
-        if (!provRes.ok) throw new Error('No se pudieron obtener los proveedores');
-        const proveedores = await provRes.json();
-        proveedores.forEach(prov => {
-          const option = document.createElement('option');
-          option.value = prov.id_proveedor;
-          option.textContent = prov.nombre_proveedor;
-          if (p.id_proveedor === prov.id_proveedor) option.selected = true;
-          selectProveedor.appendChild(option);
-        });
+        // --- OPTIMIZACIÓN: Usar funciones de carga con caché y ID seleccionado ---
+        await cargarCategoriasSelect('edit-producto-categoria', p.id_categoria);
+        await cargarProveedoresSelect('edit-producto-proveedor', p.id_proveedor);
 
         const form = document.getElementById('form-editar-producto');
         form.onsubmit = async e => {
@@ -542,9 +514,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           formData.append('nombre_producto', document.getElementById('edit-producto-nombre').value);
           formData.append('id_categoria', document.getElementById('edit-producto-categoria').value);
           formData.append('id_proveedor', document.getElementById('edit-producto-proveedor').value); // Añadir ID de proveedor
-          const imagenInput = document.getElementById('edit-producto-imagen');
+          
           if (imagenInput.files && imagenInput.files[0]) {
             formData.append('imagen_producto', imagenInput.files[0]);
+          } else if (removeImageFlag) {
+            // Si el flag está activo y no se subió una nueva imagen,
+            // le decimos al backend que la quite.
+            formData.append('remove_image', 'true');
           }
 
           const resp = await fetch(`/api/admin/productos/${id}`, { // Cambiado data a formData
@@ -603,6 +579,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             body: JSON.stringify(data)
           });
 
+        // Invalidar caché de proveedores para que se recargue la próxima vez
+        cachedSuppliers = null;
           const result = await resp.json();
           if (resp.ok) {
             mostrarNotificacion('Proveedor actualizado correctamente.', 'exito');
@@ -645,6 +623,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           body: JSON.stringify(data)
         });
 
+        // Invalidar caché de proveedores para que se recargue la próxima vez
+        cachedSuppliers = null;
         const result = await res.json();
         if (res.ok) {
           mostrarNotificacion('Proveedor agregado correctamente.', 'exito');
@@ -661,6 +641,49 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
+   * Actualiza un elemento span con el nombre del archivo seleccionado en un input.
+   * @param {HTMLInputElement} inputElement El input de tipo 'file'.
+   * @param {string} displayElementId El ID del span donde se mostrará el nombre.
+   */
+  function setupFileInputListener(inputId, displayId) {
+    const inputElement = document.getElementById(inputId);
+    if (!inputElement) return;
+
+    // Asegurarse de que el elemento para mostrar el nombre exista
+    let displayElement = document.getElementById(displayId);
+    if (!displayElement) {
+      displayElement = document.createElement('span');
+      displayElement.id = displayId;
+      displayElement.className = 'file-name-display';
+      // Insertarlo justo después del input de archivo
+      inputElement.insertAdjacentElement('afterend', displayElement);
+    }
+
+    // Botón específico para la subida de Excel
+    const confirmBtn = document.getElementById('btn-confirm-excel-upload');
+
+    inputElement.addEventListener('change', () => {
+      if (inputElement.files && inputElement.files.length > 0) {
+        const fileName = inputElement.files[0].name;
+        displayElement.textContent = fileName.length > 30 ? `${fileName.substring(0, 27)}...` : fileName;
+        
+        // Si es el input de Excel, mostramos el botón de confirmación
+        if (inputId === 'excelProductos' && confirmBtn) {
+          confirmBtn.style.display = 'inline-flex';
+          // Asignamos el evento de subida al botón
+          confirmBtn.onclick = () => subirExcelProductos(inputElement.files[0]);
+        }
+      } else {
+        displayElement.textContent = '';
+        if (inputId === 'excelProductos' && confirmBtn) {
+          confirmBtn.style.display = 'none';
+        }
+      }
+    });
+  }
+
+
+  /**
    * Añade un texto informativo sobre los formatos de archivo permitidos junto a un input de tipo file.
    * @param {string} inputId El ID del elemento input file.
    */
@@ -672,10 +695,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const existingHint = input.parentElement.querySelector('.format-hint');
     if (existingHint) existingHint.remove();
 
+    // Crear un contenedor para el hint y el nombre del archivo
+    const feedbackContainer = document.createElement('span'); // Cambiado de 'div' a 'span'
     const hint = document.createElement('span');
     hint.className = 'format-hint';
     hint.textContent = 'Formatos: JPG, PNG, GIF, WEBP';
-    input.insertAdjacentElement('afterend', hint);
+    feedbackContainer.appendChild(hint);
+    input.insertAdjacentElement('afterend', feedbackContainer);
   }
 
   // --- Abrir modal para añadir producto ---
@@ -689,6 +715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Añadir el texto informativo de formatos
     addFormatHint('nuevo-producto-imagen');
+    setupFileInputListener('nuevo-producto-imagen', 'nuevo-producto-filename');
 
     const form = document.getElementById('form-agregar-producto');
     form.onsubmit = async e => {
@@ -735,6 +762,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- Añadir productos desde excel ---
   window.subirExcelProductos = async function (file) {
     const formData = new FormData();
+    const confirmBtn = document.getElementById('btn-confirm-excel-upload');
+    if (confirmBtn) confirmBtn.disabled = true; // Deshabilitar botón para evitar doble click
+
     formData.append('file', file);
 
     try {
@@ -749,6 +779,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       console.error('Error al subir Excel de productos:', err);
       mostrarNotificacion('Error al subir Excel de productos.', 'error');
+    } finally {
+      // Limpiar el nombre del archivo después de un tiempo
+      if (confirmBtn) {
+        confirmBtn.style.display = 'none'; // Ocultar botón
+        confirmBtn.disabled = false; // Rehabilitar
+      }
+      const fileNameDisplay = document.getElementById('excel-productos-filename');
+      if (fileNameDisplay) fileNameDisplay.textContent = '';
+      document.getElementById('excelProductos').value = ''; // Limpiar el input
     }
   }
 
@@ -756,6 +795,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.subirExcelProveedores = async function (file) {
     const formData = new FormData();
     formData.append('file', file);
+    // Asumiendo que tienes un span con id="excel-proveedores-filename" en admin-suppliers.html
+    const fileNameDisplay = document.getElementById('excel-proveedores-filename');
+    if (fileNameDisplay) fileNameDisplay.textContent = file.name;
 
     try {
       const res = await fetch('/api/admin/proveedores/upload', {
@@ -769,16 +811,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       console.error('Error al subir Excel de proveedores:', err);
       mostrarNotificacion('Error al subir Excel de proveedores.', 'error');
+    } finally {
+      if (fileNameDisplay) {
+        setTimeout(() => { fileNameDisplay.textContent = ''; }, 4000);
+      }
     }
   }
 
     // --- Delegación de eventos para botones dinámicos ---
     // Esto asegura que los botones funcionen incluso si se recargan con el contenido.
     contentArea.addEventListener('click', e => {
-      const addProductBtn = e.target.closest('.btn-add-new');
-      if (addProductBtn) {
+      const target = e.target.closest('button');
+      if (!target) return;
+
+      // El botón de añadir puede estar en varios paneles, así que lo manejamos aquí
+      if (target.matches('.btn-add-new')) {
         e.preventDefault();
-        openAddProductModal();
+        if (document.getElementById('productsTable')) openAddProductModal();
+        if (document.getElementById('suppliersTable')) openAddSupplierModal();
       }
     });
 
