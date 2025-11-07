@@ -46,13 +46,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Usar imagen del producto o un placeholder si no existe
         const imagenSrc = producto.ruta_imagen || 'Font/imgs/producto_placeholder.png';
         const descripcion = producto.nombre_categoria || 'Componente de alta calidad';
+        const marca = producto.nombre_proveedor || 'Marca genérica';
 
         productoCard.innerHTML = `
           <img src="${imagenSrc}" alt="${producto.nombre_producto}" class="product-image">
           <div class="product-info">
               <h3 class="product-title">${producto.nombre_producto}</h3>
+             <p class="product-brand">${marca}</p> <!-- <-- La mostramos aquí -->
               <p class="product-description">${descripcion}</p>
-              <button class="buy-button">Comprar</button>
+              <button class="buy-button" aria-label="Añadir al carrito">
+                <i class="fa-solid fa-cart-shopping"></i>
+              </button>
           </div>
         `;
         productGrid.appendChild(productoCard);
@@ -132,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cargar productos sin filtros
     cargarProductos();
   }
-
 
 
 

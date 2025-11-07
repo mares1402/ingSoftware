@@ -74,7 +74,8 @@ app.get('/api/productos', (req, res) => { // Modificado para aceptar filtros
       p.id_producto, 
       p.nombre_producto, 
       p.ruta_imagen,
-      c.nombre_categoria
+      c.nombre_categoria,
+      pr.nombre_proveedor
     FROM 
       Productos p
     LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria

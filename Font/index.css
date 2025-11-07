@@ -363,9 +363,10 @@ body.no-scroll {
   background: var(--color-superficie);
   border-radius: var(--radio-borde);
   box-shadow: var(--sombra-suave);
-  overflow: hidden;
   text-align: left;
   transition: transform 0.2s, box-shadow 0.2s;
+  display: flex; /* Usamos flexbox para la estructura interna */
+  flex-direction: column;
 }
 
 .product-card:hover {
@@ -377,40 +378,70 @@ body.no-scroll {
   width: 100%;
   height: 200px;
   object-fit: cover;
+  border-top-left-radius: var(--radio-borde); /* Redondear esquinas superiores */
+  border-top-right-radius: var(--radio-borde);
+  transition: transform 0.3s ease; /* Transición para el zoom */
+}
+
+.product-card:hover .product-image {
+  transform: scale(1.05); /* Efecto de zoom suave en la imagen */
 }
 
 .product-info {
   padding: 15px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; /* Permite que este contenedor crezca y ocupe el espacio */
+  position: relative; /* Necesario para posicionar el botón de compra */
 }
 
 .product-title {
-  font-size: 1.2rem;
-  margin: 0 0 10px 0;
+  font-size: 1.1rem; /* Ligeramente más pequeño para un look más limpio */
+  margin: 0 0 5px 0; /* Menos espacio inferior */
   color: var(--color-texto-principal);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.product-brand {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-texto-secundario);
+  margin: 0 0 5px 0; /* Espacio normal */
+  text-transform: uppercase; /* Estilo de marca */
+  letter-spacing: 0.5px;
 }
 
 .product-description {
   font-size: 0.9rem;
   color: var(--color-texto-secundario);
   margin-bottom: 15px;
-  min-height: 40px; /* Para alinear botones */
-}
+ }
 
 .buy-button {
+  /* Posicionamiento absoluto */
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+
+  /* Estilo circular */
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
   background-color: var(--color-acento);
-  color: var(--color-fondo);
+  color: var(--color-superficie);
   border: none;
-  padding: 10px 15px;
-  border-radius: var(--radio-borde);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
   cursor: pointer;
-  width: 100%;
-  font-size: 1rem;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.2s;
 }
 
 .buy-button:hover {
   background-color: var(--color-acento-oscuro);
+  transform: scale(1.1);
 }
 
 /* === Estilos para Tablets (hasta 1023px) === */

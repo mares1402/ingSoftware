@@ -642,23 +642,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('form-agregar-producto');
     form.onsubmit = async e => {
       e.preventDefault();
-
-      const data = {
-        nombre_producto: document.getElementById('nuevo-producto-nombre').value,
-        id_categoria: document.getElementById('nuevo-producto-categoria').value,
-        id_proveedor: document.getElementById('nuevo-producto-proveedor').value
-      };
+      
+      // Usar siempre FormData para ser consistente con la subida de archivos
+      const formData = new FormData();
+      formData.append('nombre_producto', document.getElementById('nuevo-producto-nombre').value);
+      formData.append('id_categoria', document.getElementById('nuevo-producto-categoria').value);
+      formData.append('id_proveedor', document.getElementById('nuevo-producto-proveedor').value);
+      
+      const imagenInput = document.getElementById('nuevo-producto-imagen');
+      if (imagenInput.files && imagenInput.files[0]) {
+        formData.append('imagen_producto', imagenInput.files[0]);
+      }
 
       try {
         const res = await fetch('/api/admin/productos', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify(data)
+          body: formData // Enviar FormData
         });
 
         const result = await res.json();
-
         if (res.ok) {
           alert('✅ Producto agregado correctamente');
           modal.style.display = 'none';
