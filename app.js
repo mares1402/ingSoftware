@@ -40,34 +40,7 @@ const productStorage = multer.diskStorage({
 });
 const uploadProductImage = multer({ storage: productStorage }); // Middleware para subir imágenes de productos
 
-// --- API Pública ---
-// Endpoint para obtener todos los productos (público)
-app.get('/api/productos', (req, res) => {
-  const sql = `
-    SELECT 
-      p.id_producto, 
-      p.nombre_producto, 
-      p.ruta_imagen,
-      c.nombre_categoria,
-      pr.nombre_proveedor
-    FROM 
-      Productos p
-    LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria
-    LEFT JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
-    LEFT JOIN Proveedores pr ON pp.id_proveedor = pr.id_proveedor
-  `;
-
-  conexion.query(sql, (err, results) => {
-    if (err) {
-      console.error('Error al obtener productos (público):', err);
-      return res.status(500).json({ mensaje: 'Error al obtener productos' });
-    }
-    res.json(results);
-  });
-});
-
-
-// Middlewares de control de acceso 
+// --- Middlewares de control de acceso ---
 function isAuthenticated(req, res, next) {
   if (req.session && req.session.user) return next();
   // Peticiones fetch/JSON reciben 401
@@ -86,6 +59,73 @@ function isAdmin(req, res, next) {
   }
   return res.status(403).send('Acceso denegado');
 }
+
+// --- RUTAS DE LA APLICACIÓN ---
+
+// --- API Pública (para la página principal) ---
+
+// --- API Pública ---
+// Endpoint para obtener todos los productos (público)
+app.get('/api/productos', (req, res) => { // Modificado para aceptar filtros
+  const { categoria, marca } = req.query;
+
+  let sql = `
+    SELECT 
+      p.id_producto, 
+      p.nombre_producto, 
+      p.ruta_imagen,
+      c.nombre_categoria
+    FROM 
+      Productos p
+    LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria
+    LEFT JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
+    LEFT JOIN Proveedores pr ON pp.id_proveedor = pr.id_proveedor
+  `;
+
+  const params = [];
+  const conditions = [];
+
+  if (categoria) {
+    conditions.push('c.id_categoria = ?');
+    params.push(categoria);
+  }
+  if (marca) {
+    conditions.push('pr.id_proveedor = ?');
+    params.push(marca);
+  }
+
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  conexion.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error al obtener productos (público):', err);
+      return res.status(500).json({ mensaje: 'Error al obtener productos' });
+    }
+    res.json(results);
+  });
+});
+
+// --- Nuevas rutas para filtros ---
+// Endpoint para obtener todas las categorías (público)
+app.get('/api/categorias', (req, res) => {
+  const sql = 'SELECT id_categoria, nombre_categoria FROM CategoriaProductos ORDER BY nombre_categoria';
+  conexion.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ mensaje: 'Error al obtener categorías' });
+    res.json(results);
+  });
+});
+
+// Endpoint para obtener todas las marcas (proveedores) (público)
+app.get('/api/marcas', (req, res) => {
+  // Se asume que las "marcas" son los "proveedores"
+  const sql = 'SELECT id_proveedor, nombre_proveedor FROM Proveedores ORDER BY nombre_proveedor';
+  conexion.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ mensaje: 'Error al obtener marcas' });
+    res.json(results);
+  });
+});
 
 // Servir dashboard protegido
 app.get('/dashboard', isAuthenticated, (req, res, next) => {
@@ -130,14 +170,14 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Rutas de la API de Admin (para datos)
-// Pasamos el middleware de upload a adminRoutes
-app.use('/api/admin', isAdmin, adminRoutes(uploadProductImage));
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Servir archivos subidos estáticamente
-
 // Rutas públicas de autenticación (login / signup)
 app.use('/', authRoutes);
+
+// Rutas de la API de Admin (para datos)
+// Pasamos el middleware de upload a adminRoutes
+app.use('/api/admin', isAuthenticated, isAdmin, adminRoutes(uploadProductImage));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Servir archivos subidos estáticamente
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));

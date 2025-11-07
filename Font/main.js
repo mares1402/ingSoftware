@@ -7,18 +7,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeFilterBtn = document.querySelector('.close-filter-btn');
   const overlay = document.querySelector('.overlay');
   const userActionsContainer = document.getElementById('user-actions-container');
+  const categoryFilterList = document.getElementById('category-filter-list');
+  const brandFilterList = document.getElementById('brand-filter-list');
+  const applyFiltersBtn = document.querySelector('.filter-button');
 
   /**
    * Carga los productos desde la API y los muestra en la página.
+   * @param {object} [filters={}] - Objeto con los filtros a aplicar.
    */
-  async function cargarProductos() {
+  async function cargarProductos(filters = {}) {
     if (!productGrid) return;
 
     // Muestra un indicador de carga
     productGrid.innerHTML = '<p>Cargando productos...</p>';
 
+    const queryParams = new URLSearchParams(filters).toString();
+    const url = `/api/productos${queryParams ? `?${queryParams}` : ''}`;
+
     try {
-      const response = await fetch('/api/productos');
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('No se pudieron cargar los productos.');
       }
@@ -54,6 +61,64 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error al cargar productos:', error);
       productGrid.innerHTML = '<p>Hubo un error al cargar los productos. Inténtalo de nuevo más tarde.</p>';
     }
+  }
+
+  /**
+   * Carga y muestra las opciones de filtro (categorías y marcas).
+   * @param {string} endpoint - La URL del API para obtener los filtros.
+   * @param {HTMLElement} listElement - El elemento <ul> donde se insertarán los filtros.
+   * @param {string} filterKey - El nombre de la clave para la URL (ej. 'categoria').
+   * @param {string} idField - El nombre del campo ID en la respuesta JSON.
+   * @param {string} nameField - El nombre del campo de nombre en la respuesta JSON.
+   */
+  async function cargarOpcionesFiltro(endpoint, listElement, filterKey, idField, nameField) {
+    if (!listElement) return;
+
+    try {
+      const response = await fetch(endpoint);
+      if (!response.ok) throw new Error(`No se pudieron cargar los datos de ${endpoint}`);
+      const items = await response.json();
+
+      listElement.innerHTML = ''; // Limpiar
+
+      if (items.length === 0) {
+        listElement.innerHTML = '<li>No hay opciones.</li>';
+        return;
+      }
+
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <label>
+            <input type="radio" name="${filterKey}" value="${item[idField]}">
+            ${item[nameField]}
+          </label>
+        `;
+        listElement.appendChild(li);
+      });
+
+    } catch (error) {
+      console.error(`Error al cargar filtros desde ${endpoint}:`, error);
+      listElement.innerHTML = '<li>Error al cargar.</li>';
+    }
+  }
+
+  /**
+   * Aplica los filtros seleccionados y recarga los productos.
+   */
+  function aplicarFiltros() {
+    const selectedCategory = document.querySelector('input[name="categoria"]:checked');
+    const selectedBrand = document.querySelector('input[name="marca"]:checked');
+
+    const filters = {};
+    if (selectedCategory) {
+      filters.categoria = selectedCategory.value;
+    }
+    if (selectedBrand) {
+      filters.marca = selectedBrand.value;
+    }
+
+    cargarProductos(filters);
   }
 
   /**
@@ -124,8 +189,16 @@ document.addEventListener('DOMContentLoaded', () => {
     closeFilterBtn.addEventListener('click', toggleFilterMenu);
   }
 
+  // --- Lógica de Filtros ---
+  if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener('click', aplicarFiltros);
+  }
+
   // --- Cargas Iniciales ---
   verificarSesion();
   // Cargar los productos sin filtros al iniciar la página
   cargarProductos();
+  // Cargar las opciones para los filtros
+  cargarOpcionesFiltro('/api/categorias', categoryFilterList, 'categoria', 'id_categoria', 'nombre_categoria');
+  cargarOpcionesFiltro('/api/marcas', brandFilterList, 'marca', 'id_proveedor', 'nombre_proveedor');
 });
