@@ -36,11 +36,8 @@
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
                     <input type="text" placeholder="Buscar fresas, motores, guías..." class="search-input">
                 </div>
-                <div class="user-actions">
-                    <a href="Font/login.html" class="login-link" >Iniciar sesión</a>
-                    <span class="separator">|</span>
-                    <a href="Font/signup.html" class="login-link">Registrarse</a>
-                </div>
+                <!-- Contenedor para los botones de usuario, se llenará con JS -->
+                <div class="user-actions" id="user-actions-container"></div>
             </div>
 
             <button class="mobile-nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
@@ -56,20 +53,15 @@
                     </button>
                     <h3>Filtros</h3>
                     <div class="filter-group">
-                        <h4>Categoría</h4>
-                        <ul>
-                            <li><label><input type="checkbox" name="category" value="fresas"> Fresas y Brocas</label></li>
-                            <li><label><input type="checkbox" name="category" value="motores"> Motores</label></li>
-                            <li><label><input type="checkbox" name="category" value="mecanica"> Componentes Mecánicos</label></li>
-                            <li><label><input type="checkbox" name="category" value="electronica"> Electrónica</label></li>
+                        <h4 id="category-filter-title">Categoría</h4>
+                        <ul id="category-filter-list">
+                            <!-- Las categorías se cargarán aquí -->
                         </ul>
                     </div>
                     <div class="filter-group">
-                        <h4>Marca</h4>
-                        <ul>
-                            <li><label><input type="checkbox" name="brand" value="hiwin"> Hiwin</label></li>
-                            <li><label><input type="checkbox" name="brand" value="stepperonline"> StepperOnline</label></li>
-                            <li><label><input type="checkbox" name="brand" value="duet3d"> Duet3D</label></li>
+                        <h4 id="brand-filter-title">Marca</h4>
+                        <ul id="brand-filter-list">
+                            <!-- Las marcas se cargarán aquí -->
                         </ul>
                     </div>
                     <button class="filter-button">Aplicar Filtros</button>
@@ -81,34 +73,7 @@
                     </button>
                     <p class="area-subtitle">Todo lo que necesitas para tus proyectos de manufactura y automatización.</p>
                     <section class="product-grid">
-                        <!-- Producto 1 -->
-                        <div class="product-card">
-                            <img src="Font/imgs/producto_placeholder.png" alt="Producto 1" class="product-image">
-                            <div class="product-info">
-                                <h3 class="product-title">Fresa de Carburo 2 Filos</h3>
-                                <p class="product-description">Fresa de 1/4" de diámetro, ideal para corte de madera y plásticos.</p>
-                                <button class="buy-button">Comprar</button>
-                            </div>
-                        </div>
-                        <!-- Producto 2 -->
-                        <div class="product-card">
-                            <img src="Font/imgs/producto_placeholder.png" alt="Producto 2" class="product-image">
-                            <div class="product-info">
-                                <h3 class="product-title">Motor a Pasos NEMA 23</h3>
-                                <p class="product-description">Motor de alto torque para ejes de maquinaria CNC. 3.0A, 2.8N.m.</p>
-                                <button class="buy-button">Comprar</button>
-                            </div>
-                        </div>
-                        <!-- Producto 3 -->
-                        <div class="product-card">
-                            <img src="Font/imgs/producto_placeholder.png" alt="Producto 3" class="product-image">
-                            <div class="product-info">
-                                <h3 class="product-title">Guía Lineal MGN12 500mm</h3>
-                                <p class="product-description">Guía lineal de precisión con balero para movimiento suave y exacto.</p>
-                                <button class="buy-button">Comprar</button>
-                            </div>
-                        </div>
-                        <!-- Puedes agregar más productos aquí -->
+                        <!-- Los productos se cargarán aquí dinámicamente -->
                     </section>
                 </div>
             </div>

@@ -40,6 +40,32 @@ const productStorage = multer.diskStorage({
 });
 const uploadProductImage = multer({ storage: productStorage }); // Middleware para subir imágenes de productos
 
+// --- API Pública ---
+// Endpoint para obtener todos los productos (público)
+app.get('/api/productos', (req, res) => {
+  const sql = `
+    SELECT 
+      p.id_producto, 
+      p.nombre_producto, 
+      p.ruta_imagen,
+      c.nombre_categoria,
+      pr.nombre_proveedor
+    FROM 
+      Productos p
+    LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria
+    LEFT JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
+    LEFT JOIN Proveedores pr ON pp.id_proveedor = pr.id_proveedor
+  `;
+
+  conexion.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error al obtener productos (público):', err);
+      return res.status(500).json({ mensaje: 'Error al obtener productos' });
+    }
+    res.json(results);
+  });
+});
+
 
 // Middlewares de control de acceso 
 function isAuthenticated(req, res, next) {

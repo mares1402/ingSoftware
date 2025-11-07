@@ -20,6 +20,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('avatar').textContent =
       (nombre[0] || '').toUpperCase() + (paterno[0] || '').toUpperCase() || 'U';
     document.getElementById('userFullName').textContent = `${nombre} ${paterno} ${materno}`.trim() || 'Usuario';
+
+    // Cambiar el título de la página dinámicamente
+    if (!esAdmin) {
+      document.title = 'Mi Perfil - Mount';
+    }
     document.getElementById('userEmail').textContent = correo;
 
     const contentArea = document.getElementById('content-area');
@@ -155,7 +160,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Cargar categorías en el select ---
     async function cargarCategoriasSelect(selectId) {
-      const res = await fetch('/api/admin/categorias');
+      const res = await fetch('/api/admin/listado-categorias', {
+        method: 'GET',
+        credentials: 'same-origin'
+      });
       const cats = await res.json();
       const select = document.getElementById(selectId);
       select.innerHTML = '<option value="">Seleccionar...</option>';
@@ -446,8 +454,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!res.ok) throw new Error('Producto no encontrado');
         const p = await res.json();
 
-        // Obtener categorías dinámicamente
-        const catRes = await fetch('/api/admin/categorias', { credentials: 'same-origin' });
+        // Obtener categorías dinámicamente (usando la nueva ruta)
+        const catRes = await fetch('/api/admin/listado-categorias', { credentials: 'same-origin' });
         if (!catRes.ok) throw new Error('No se pudieron obtener las categorías');
         const categorias = await catRes.json();
 

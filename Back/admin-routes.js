@@ -430,7 +430,7 @@ router.delete('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
 
 // --- CATEGORÍAS ---
 // Obtener todas las categorías (para los selects dinámicos)
-router.get('/categorias', isAuthenticated, isAdmin, (req, res) => {
+router.get('/listado-categorias', isAuthenticated, isAdmin, (req, res) => {
   conexion.query('SELECT * FROM CategoriaProductos', (err, results) => {
     if (err) {
       console.error('Error al obtener categorías:', err);
