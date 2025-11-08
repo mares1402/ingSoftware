@@ -27,6 +27,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 4000);
   }
 
+  /**
+   * Muestra un modal de confirmación genérico.
+   * @param {string} titulo El título del modal.
+   * @param {string} mensaje El mensaje de confirmación.
+   * @param {function} onConfirm El callback a ejecutar si el usuario confirma.
+   */
+  function mostrarConfirmacion(titulo, mensaje, onConfirm) {
+    // Reutilizar el modal si ya existe
+    let modal = document.getElementById('generic-confirm-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'generic-confirm-modal';
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+          <h3 class="modal-title"></h3>
+          <p class="modal-message"></p>
+          <div class="modal-actions">
+            <button class="btn-confirm">Sí, eliminar</button>
+            <button class="btn-cancel">Cancelar</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    // Configurar contenido y eventos
+    modal.querySelector('.modal-title').textContent = titulo;
+    modal.querySelector('.modal-message').textContent = mensaje;
+
+    // Usar .onclick para evitar listeners duplicados
+    modal.querySelector('.btn-confirm').onclick = () => { modal.style.display = 'none'; onConfirm(); };
+    modal.querySelector('.btn-cancel').onclick = () => { modal.style.display = 'none'; };
+    modal.querySelector('.modal-overlay').onclick = () => { modal.style.display = 'none'; };
+
+    modal.style.display = 'flex';
+  }
+
   // --- OPTIMIZACIÓN: Caché para datos que no cambian a menudo ---
   let cachedCategories = null;
   let cachedSuppliers = null;
@@ -266,16 +305,17 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (editBtn) {
             openEditUserModal(editBtn.dataset.id);
           } else if (deleteBtn) {
-            if (!confirm('¿Seguro que deseas eliminar este usuario?')) return;
-            try {
-              const res = await fetch(`/api/admin/usuarios/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
-              if (!res.ok) throw new Error('No se pudo eliminar el usuario');
-              loadUsuarios();
-              mostrarNotificacion('Usuario eliminado correctamente.', 'exito');
-            } catch (err) {
-              console.error(err);
-              mostrarNotificacion('Error al eliminar el usuario.', 'error');
-            }
+            mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este usuario?', async () => { // Esto usa el modal estilizado
+              try {
+                const res = await fetch(`/api/admin/usuarios/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el usuario');
+                mostrarNotificacion(result.mensaje, 'exito');
+                loadUsuarios();
+              } catch (err) {
+                mostrarNotificacion(err.message, 'error');
+              }
+            });
           }
         };
       } catch (err) {
@@ -304,17 +344,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           <td>${p.nombre_categoria || '-'}</td>
           <td>${p.nombre_proveedor || 'Sin proveedor'}</td>
           <td>
-            <button class="btn-edit-product" data-id="${p.id_producto}">
-              <i class="fa-solid fa-pen"></i>
-            </button>
-            <button class="btn-delete-product" data-id="${p.id_producto}">
-              <i class="fa-solid fa-trash"></i>
-            </button>
+            <button class="btn-edit-product" data-id="${p.id_producto}"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-delete-product" data-id="${p.id_producto}"><i class="fa-solid fa-trash"></i></button>
           </td>
         </tr>
       `).join('');
 
-      // --- OPTIMIZACIÓN: Delegación de eventos ---
       tablaBody.onclick = async (e) => {
         const editBtn = e.target.closest('.btn-edit-product');
         const deleteBtn = e.target.closest('.btn-delete-product');
@@ -322,10 +357,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (editBtn) {
           openEditProductModal(editBtn.dataset.id);
         } else if (deleteBtn) {
-          if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
-          await fetch(`/api/admin/productos/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
-          mostrarNotificacion('Producto eliminado correctamente.', 'exito');
-          loadProductos();
+          mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este producto? Esto también borrará su imagen.', async () => {
+            try {
+              const res = await fetch(`/api/admin/productos/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+              const result = await res.json();
+              if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el producto');
+              mostrarNotificacion(result.mensaje, 'exito');
+              loadProductos();
+            } catch (err) {
+              mostrarNotificacion(err.message, 'error');
+            }
+          });
         }
       };
       } catch (err) {
@@ -334,7 +376,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
     
-    // --- Cargar Proveedores ---
+    // --- Cargar proveedores ---
     async function loadProveedores() {
       try {
         const res = await fetch('/api/admin/proveedores', { credentials: 'same-origin' });
@@ -343,8 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const tbody = document.querySelector('#suppliersTable tbody');
         if (!tbody) return;
-        
-        // --- OPTIMIZACIÓN: Construir HTML y añadirlo una sola vez ---
+
         tbody.innerHTML = proveedores.map(p => `
           <tr>
             <td>${p.id_proveedor}</td>
@@ -359,7 +400,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           </tr>
         `).join('');
 
-        // --- OPTIMIZACIÓN: Delegación de eventos ---
         tbody.onclick = async (e) => {
           const editBtn = e.target.closest('.btn-edit-supplier');
           const deleteBtn = e.target.closest('.btn-delete-supplier');
@@ -367,12 +407,18 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (editBtn) {
             openEditSupplierModal(editBtn.dataset.id);
           } else if (deleteBtn) {
-            if (!confirm('¿Seguro que deseas eliminar este proveedor?')) return;
-            await fetch(`/api/admin/proveedores/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
-            // Invalidar caché de proveedores para que se recargue la próxima vez
-            cachedSuppliers = null;
-            mostrarNotificacion('Proveedor eliminado correctamente.', 'exito');
-            loadProveedores();
+            mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este proveedor?', async () => {
+              try {
+                const res = await fetch(`/api/admin/proveedores/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el proveedor');
+                cachedSuppliers = null; // Invalidar caché para que se recargue
+                mostrarNotificacion(result.mensaje, 'exito');
+                loadProveedores();
+              } catch (err) {
+                mostrarNotificacion(err.message, 'error');
+              }
+            });
           }
         };
       } catch (err) {

@@ -81,7 +81,7 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
 
     conexion.query('DELETE FROM Usuario WHERE id_usuario=?', [id], (err) => {
       if (err) return res.status(500).json({ mensaje: 'Error al eliminar usuario', error: err });
-      res.json({ mensaje: 'Usuario eliminado correctamente' });
+      res.json({ mensaje: 'Usuario eliminado con éxito' });
     });
   });
 
@@ -333,114 +333,6 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
     }
   });
 
-/*
-  // Actualizar producto y su proveedor
-  router.put('/productos/:id', isAuthenticated, isAdmin, uploadProductImage.single('imagen_producto'), (req, res) => { // Con subida de imagen
-    const { id } = req.params;
-    const { nombre_producto, id_categoria, id_proveedor } = req.body;
-
-    // Obtener una conexión del pool
-    conexion.getConnection((err, conn) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
-
-      conn.beginTransaction(err => {
-        if (err) {
-          conn.release();
-          return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
-        }
-
-        // 1. Actualizar la tabla de Productos
-        conn.query(
-          `UPDATE Productos SET nombre_producto=?, id_categoria=? ${req.file ? ', ruta_imagen=?' : ''} WHERE id_producto=?`,
-          [
-            nombre_producto,
-            id_categoria,
-            ...(req.file ? [`/uploads/products/${req.file.filename}`] : []),
-            id
-          ],
-          (err) => {
-            if (err) {
-              return conn.rollback(() => {
-                conn.release();
-                res.status(500).json({ mensaje: 'Error al actualizar producto', error: err });
-              });
-            }
-
-            // 2. Actualizar la tabla de asociación ProductoProveedor
-            conn.query(
-              'UPDATE ProductoProveedor SET id_proveedor=? WHERE id_producto=?',
-              [id_proveedor, id],
-              (err) => {
-                if (err) {
-                  return conn.rollback(() => {
-                    conn.release();
-                    res.status(500).json({ mensaje: 'Error al actualizar proveedor del producto', error: err });
-                  });
-                }
-
-                // 3. Confirmar la transacción
-                conn.commit(err => {
-                  if (err) {
-                    return conn.rollback(() => {
-                      conn.release();
-                      res.status(500).json({ mensaje: 'Error al confirmar cambios', error: err });
-                    });
-                  }
-                  conn.release();
-                  res.json({ mensaje: 'Producto actualizado correctamente' });
-                });
-              }
-            );
-          }
-        );
-      });
-    });
-  });
-
-// Eliminar producto
-router.delete('/productos/:id', isAuthenticated, isAdmin, async (req, res) => {
-  const { id } = req.params;
-  let conn;
-
-  try {
-    conn = await conexion.promise().getConnection();
-
-    // 1. Obtener la ruta de la imagen antes de borrar el producto
-    const [rows] = await conn.query('SELECT ruta_imagen FROM Productos WHERE id_producto = ?', [id]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ mensaje: 'Producto no encontrado' });
-    }
-
-    const rutaImagen = rows[0].ruta_imagen;
-
-    // 2. Eliminar el producto de la base de datos
-    const [deleteResult] = await conn.query('DELETE FROM Productos WHERE id_producto = ?', [id]);
-
-    if (deleteResult.affectedRows === 0) {
-      // Esto no debería pasar si la selección anterior funcionó, pero es una buena práctica
-      return res.status(404).json({ mensaje: 'Producto no encontrado al intentar eliminar' });
-    }
-
-    // 3. Si había una imagen, eliminar el archivo del servidor
-    if (rutaImagen) {
-      const imagePath = path.join(__dirname, '..', rutaImagen); // Construye la ruta absoluta
-      fs.unlink(imagePath, (err) => {
-        if (err) console.error(`Error al eliminar archivo de imagen ${imagePath}:`, err);
-        else console.log(`Archivo de imagen ${imagePath} eliminado.`);
-      });
-    }
-
-    res.json({ mensaje: 'Producto eliminado correctamente' });
-  } catch (error) {
-    console.error('Error al eliminar producto:', error);
-    res.status(500).json({ error: 'Error al eliminar el producto' });
-  } finally {
-    if (conn) conn.release(); // Libera la conexión al pool
-  }
-});
-*/
-
 // --- PROVEEDORES ---
 // === CARGAR PROVEEDORES DESDE EXCEL ===
 router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file'), (req, res) => {
@@ -520,7 +412,7 @@ router.delete('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
   const { id } = req.params;
   conexion.query('DELETE FROM Proveedores WHERE id_proveedor=?', [id], (err) => {
     if (err) return res.status(500).json({ mensaje: 'Error al eliminar proveedor', error: err });
-    res.json({ mensaje: 'Proveedor eliminado correctamente' });
+    res.json({ mensaje: 'Proveedor eliminado con éxito' });
   });
 });
 

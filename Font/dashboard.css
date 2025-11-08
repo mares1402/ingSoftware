@@ -193,6 +193,35 @@ hr { border:0; border-top:1px solid #eee; }
   transform: translateY(0);
 }
 
+/* === Estilos para Modal de Confirmación === */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.modal-actions .btn-confirm,
+.modal-actions .btn-cancel {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.modal-actions .btn-confirm {
+  background-color: var(--danger);
+  color: white;
+}
+.modal-actions .btn-confirm:hover { background-color: #e04444; transform: translateY(-1px); }
+
+.modal-actions .btn-cancel {
+  background-color: #f0f2f5;
+  color: var(--text);
+}
+.modal-actions .btn-cancel:hover { background-color: #e2e6ea; }
 /* === Estilos para Modales === */
 .modal {
   position: fixed;
@@ -383,6 +412,7 @@ hr { border:0; border-top:1px solid #eee; }
 
 .btn-edit-user:hover, .btn-edit-product:hover, .btn-edit-supplier:hover {
   background-color: #e9f2ff;
+  border-color: #c7dfff;
   color: var(--accent);
 }
 
