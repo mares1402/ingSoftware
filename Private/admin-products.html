@@ -2,12 +2,12 @@
   <div class="panel-actions">
     <input type="search" placeholder="Buscar por nombre o SKU..." class="panel-search" aria-label="Buscar productos">
     <button class="btn-add-new"><i class="fa-solid fa-plus"></i> Añadir Producto</button>
-    <button class="btn-upload-excel" onclick="document.getElementById('excelProductos').click()">
+    <button type="button" class="btn-upload-excel" onclick="document.getElementById('excelProductos').click()">
       <i class="fa-solid fa-file-excel"></i> Cargar desde Excel
     </button>
     <input type="file" id="excelProductos" accept=".xlsx, .xls" style="display:none">
     <span id="excel-productos-filename" class="file-name-display"></span>
-    <button id="btn-confirm-excel-upload" class="btn-add-new" style="display:none; background-color: #1D6F42;">Subir Archivo</button>
+    <button id="btn-confirm-excel-upload" class="btn-confirm-upload" style="display:none;" title="Subir Archivo"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
   </div>
 </div>
 

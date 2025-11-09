@@ -333,6 +333,53 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
     }
   });
 
+  // Eliminar producto
+  router.delete('/productos/:id', isAuthenticated, isAdmin, async (req, res) => {
+    const { id } = req.params;
+    let conn;
+
+    try {
+      conn = await conexion.promise().getConnection();
+      await conn.beginTransaction();
+
+      // 1. Obtener la ruta de la imagen para borrarla después
+      const [rows] = await conn.query('SELECT ruta_imagen FROM Productos WHERE id_producto = ?', [id]);
+      const imagePath = rows.length > 0 ? rows[0].ruta_imagen : null;
+
+      // 2. Eliminar la asociación en ProductoProveedor
+      await conn.query('DELETE FROM ProductoProveedor WHERE id_producto = ?', [id]);
+
+      // 3. Eliminar el producto de la tabla Productos
+      const [deleteResult] = await conn.query('DELETE FROM Productos WHERE id_producto = ?', [id]);
+
+      if (deleteResult.affectedRows === 0) {
+        throw new Error('El producto no fue encontrado o ya fue eliminado.');
+      }
+
+      // 4. Confirmar la transacción
+      await conn.commit();
+
+      // 5. Si todo fue bien, eliminar el archivo de imagen del servidor
+      if (imagePath) {
+        const fullPath = path.join(__dirname, '..', imagePath);
+        fs.unlink(fullPath, (err) => {
+          if (err) console.error(`Error al eliminar archivo de imagen ${fullPath}:`, err);
+        });
+      }
+
+      res.json({ mensaje: 'Producto eliminado correctamente.' });
+
+    } catch (error) {
+      if (conn) await conn.rollback();
+      console.error('Error al eliminar producto:', error);
+      res.status(500).json({ mensaje: 'Error en el servidor al eliminar el producto.', error: error.message });
+
+    } finally {
+      if (conn) conn.release();
+    }
+  });
+
+
 // --- PROVEEDORES ---
 // === CARGAR PROVEEDORES DESDE EXCEL ===
 router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file'), (req, res) => {
@@ -417,20 +464,97 @@ router.delete('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
 });
 
 // --- CATEGORÍAS ---
-// Obtener todas las categorías (para los selects dinámicos)
-router.get('/listado-categorias', isAuthenticated, isAdmin, (req, res) => {
-  conexion.query('SELECT * FROM CategoriaProductos', (err, results) => {
-    if (err) {
-      console.error('Error al obtener categorías:', err);
-      return res.status(500).json({ mensaje: 'Error al obtener categorías' });
+
+// === CARGAR CATEGORÍAS DESDE EXCEL ===
+router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'), (req, res) => {
+  try {
+    const workbook = XLSX.readFile(req.file.path);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet);
+
+    // Se espera una columna "Nombre" en el Excel
+    // data = [{ Nombre: 'Categoría 1' }, { Nombre: 'Categoría 2' }, ...]
+
+    const inserts = data.map(row => [row.Nombre]);
+
+    if (inserts.length === 0) {
+      return res.status(400).json({ mensaje: 'El archivo Excel está vacío o no tiene la columna "Nombre".' });
     }
+
+    const sql = `INSERT INTO CategoriaProductos (nombre_categoria) VALUES ?`;
+
+    conexion.query(sql, [inserts], (err, result) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al insertar categorías', error: err });
+      res.json({ mensaje: `Se agregaron ${result.affectedRows} categorías correctamente.` });
+    });
+  } catch (err) {
+    res.status(500).json({ mensaje: 'Error al procesar archivo Excel', error: err });
+  }
+});
+
+// Obtener todas las categorías (para la tabla de administración)
+router.get('/categorias', isAuthenticated, isAdmin, (req, res) => {
+  conexion.query('SELECT * FROM CategoriaProductos ORDER BY id_categoria ASC', (err, results) => {
+    if (err) return res.status(500).json({ mensaje: 'Error al obtener categorías', error: err });
     res.json(results);
+  });
+});
+
+// Obtener categoría individual
+router.get('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
+  const { id } = req.params;
+  conexion.query('SELECT * FROM CategoriaProductos WHERE id_categoria = ?', [id], (err, results) => {
+    if (err) return res.status(500).json({ mensaje: 'Error al obtener la categoría', error: err });
+    if (!results.length) return res.status(404).json({ mensaje: 'Categoría no encontrada' });
+    res.json(results[0]);
+  });
+});
+
+// Crear categoría
+router.post('/categorias', isAuthenticated, isAdmin, (req, res) => {
+  const { nombre_categoria } = req.body;
+  if (!nombre_categoria) {
+    return res.status(400).json({ mensaje: 'El nombre de la categoría es obligatorio.' });
+  }
+  conexion.query(
+    'INSERT INTO CategoriaProductos (nombre_categoria) VALUES (?)',
+    [nombre_categoria],
+    (err, result) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al crear la categoría', error: err });
+      res.status(201).json({ mensaje: 'Categoría creada correctamente', id: result.insertId });
+    }
+  );
+});
+
+// Actualizar categoría
+router.put('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
+  const { id } = req.params;
+  const { nombre_categoria } = req.body;
+  if (!nombre_categoria) {
+    return res.status(400).json({ mensaje: 'El nombre de la categoría es obligatorio.' });
+  }
+  conexion.query(
+    'UPDATE CategoriaProductos SET nombre_categoria = ? WHERE id_categoria = ?',
+    [nombre_categoria, id],
+    (err) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al actualizar la categoría', error: err });
+      res.json({ mensaje: 'Categoría actualizada correctamente' });
+    }
+  );
+});
+
+// Eliminar categoría
+router.delete('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
+  const { id } = req.params;
+  conexion.query('DELETE FROM CategoriaProductos WHERE id_categoria = ?', [id], (err) => {
+    if (err) return res.status(500).json({ mensaje: 'Error al eliminar la categoría. Asegúrate de que no esté en uso por algún producto.', error: err });
+    res.json({ mensaje: 'Categoría eliminada con éxito' });
   });
 });
 
 // --- Panel de administración ---
 router.get('/panel/:archivo', isAuthenticated, isAdmin, (req, res) => {
-  const archivosPermitidos = ['admin-users.html', 'admin-products.html', 'admin-suppliers.html'];
+  const archivosPermitidos = ['admin-users.html', 'admin-products.html', 'admin-suppliers.html', 'admin-categories.html'];
   const archivo = req.params.archivo;
 
   if (!archivosPermitidos.includes(archivo)) {

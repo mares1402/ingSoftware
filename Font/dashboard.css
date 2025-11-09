@@ -329,6 +329,26 @@ hr { border:0; border-top:1px solid #eee; }
   background-color: #1a6eff;
 }
 
+.btn-confirm-upload {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1D6F42; /* Color verde para Excel */
+  color: white;
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+.btn-confirm-upload:hover {
+  background-color: #145A32;
+  transform: scale(1.1);
+}
+
 .btn-upload-excel {
   padding: 8px 12px;
   border-radius: 6px;
@@ -399,7 +419,8 @@ hr { border:0; border-top:1px solid #eee; }
 /* === Estilos para Botones de Acción en Tablas === */
 .btn-edit-user, .btn-delete-user,
 .btn-edit-product, .btn-delete-product,
-.btn-edit-supplier, .btn-delete-supplier {
+.btn-edit-supplier, .btn-delete-supplier,
+.btn-edit-category, .btn-delete-category {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -410,13 +431,13 @@ hr { border:0; border-top:1px solid #eee; }
   color: var(--muted);
 }
 
-.btn-edit-user:hover, .btn-edit-product:hover, .btn-edit-supplier:hover {
+.btn-edit-user:hover, .btn-edit-product:hover, .btn-edit-supplier:hover, .btn-edit-category:hover {
   background-color: #e9f2ff;
   border-color: #c7dfff;
   color: var(--accent);
 }
 
-.btn-delete-user:hover, .btn-delete-product:hover, .btn-delete-supplier:hover {
+.btn-delete-user:hover, .btn-delete-product:hover, .btn-delete-supplier:hover, .btn-delete-category:hover {
   background-color: #fff0f0;
   color: var(--danger);
 }

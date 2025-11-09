@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const overlay = document.querySelector('.overlay');
   const userActionsContainer = document.getElementById('user-actions-container');
   const categoryFilterList = document.getElementById('category-filter-list');
-  const brandFilterList = document.getElementById('brand-filter-list');
   const applyFiltersBtn = document.querySelector('.filter-button');
   const clearFiltersBtn = document.querySelector('.clear-filter-button');
 
@@ -113,11 +112,9 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function aplicarFiltros() {
     const selectedCategories = Array.from(document.querySelectorAll('input[name="categoria"]:checked')).map(cb => cb.value);
-    const selectedBrands = Array.from(document.querySelectorAll('input[name="marca"]:checked')).map(cb => cb.value);
 
     const params = new URLSearchParams();
     selectedCategories.forEach(cat => params.append('categoria', cat));
-    selectedBrands.forEach(brand => params.append('marca', brand));
 
     // La función cargarProductos ya sabe cómo manejar los parámetros de la URL
     cargarProductos(params);
@@ -229,5 +226,4 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarProductos();
   // Cargar las opciones para los filtros
   cargarOpcionesFiltro('/api/categorias', categoryFilterList, 'categoria', 'id_categoria', 'nombre_categoria');
-  cargarOpcionesFiltro('/api/marcas', brandFilterList, 'marca', 'id_proveedor', 'nombre_proveedor');
 });

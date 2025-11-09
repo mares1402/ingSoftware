@@ -2,10 +2,12 @@
   <div class="panel-actions">
     <input type="search" placeholder="Buscar por nombre o RFC..." class="panel-search" aria-label="Buscar proveedores">
     <button class="btn-add-new"><i class="fa-solid fa-plus"></i> Añadir Proveedor</button>
-    <button class="btn-upload-excel" onclick="document.getElementById('excelProveedores').click()">
+    <button type="button" class="btn-upload-excel" onclick="document.getElementById('excelProveedores').click()">
       <i class="fa-solid fa-file-excel"></i> Cargar desde Excel
     </button>
-    <input type="file" id="excelProveedores" accept=".xlsx, .xls" style="display:none" onchange="subirExcelProveedores(this.files[0])">
+    <input type="file" id="excelProveedores" accept=".xlsx, .xls" style="display:none">
+    <span id="excel-proveedores-filename" class="file-name-display"></span>
+    <button id="btn-confirm-excel-upload-proveedores" class="btn-confirm-upload" style="display:none;" title="Subir Archivo"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
   </div>
 </div>
 

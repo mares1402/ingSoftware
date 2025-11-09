@@ -137,10 +137,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
           if (section === 'admin-products.html') loadProductos();
           if (section === 'admin-suppliers.html') loadProveedores();
+          if (section === 'admin-categories.html') loadCategorias(); 
           // Aquí podrías añadir la carga de datos para las cotizaciones en el futuro
 
           // Configurar listener para el input de Excel
           setupFileInputListener('excelProductos', 'excel-productos-filename');
+          setupFileInputListener('excelProveedores', 'excel-proveedores-filename');
+          setupFileInputListener('excelCategorias', 'excel-categorias-filename');
 
         } catch (err) {
           mostrarNotificacion(`Error cargando el panel: ${err.message}`, 'error');
@@ -173,6 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <li><a href="#" class="nav-link" data-section="admin-users.html"><i class="fa-solid fa-users"></i> Usuarios</a></li>
           <li><a href="#" class="nav-link" data-section="admin-products.html"><i class="fa-solid fa-box-archive"></i> Productos</a></li>
           <li><a href="#" class="nav-link" data-section="admin-suppliers.html"><i class="fa-solid fa-dolly"></i> Proveedores</a></li>
+          <li><a href="#" class="nav-link" data-section="admin-categories.html"><i class="fa-solid fa-tags"></i> Categorías</a></li>
         </ul>
       `;
     } else {
@@ -186,6 +190,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     navContainer.innerHTML = navHTML;
 
     // Asignar eventos a los nuevos links
+    // Invalidar caché de categorías si se navega a la sección de categorías para asegurar datos frescos
+    contentArea.addEventListener('click', e => {
+      if (e.target.closest('[data-section="admin-categories.html"]')) {
+        cachedCategories = null;
+      }
+    });
     navContainer.querySelectorAll('.nav-link').forEach(link => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
@@ -233,7 +243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Cargar categorías en el select ---
     async function cargarCategoriasSelect(selectId, selectedId = null) {
       if (!cachedCategories) {
-        const res = await fetch('/api/admin/listado-categorias', { credentials: 'same-origin' });
+        const res = await fetch('/api/admin/categorias', { credentials: 'same-origin' });
         cachedCategories = await res.json();
       }
       const select = document.getElementById(selectId);
@@ -359,7 +369,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (deleteBtn) {
           mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este producto? Esto también borrará su imagen.', async () => {
             try {
-              const res = await fetch(`/api/admin/productos/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+              const res = await fetch(`/api/admin/productos/${deleteBtn.dataset.id}`, { 
+                method: 'DELETE', 
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' } // <-- Cabecera añadida
+              });
               const result = await res.json();
               if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el producto');
               mostrarNotificacion(result.mensaje, 'exito');
@@ -427,6 +441,57 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
+    // --- Cargar categorías ---
+    async function loadCategorias() {
+      try {
+        const res = await fetch('/api/admin/categorias', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('No se pudieron obtener las categorías');
+        const categorias = await res.json();
+
+        const tbody = document.querySelector('#categoriesTable tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = categorias.map(c => `
+          <tr>
+            <td>${c.id_categoria}</td>
+            <td>${c.nombre_categoria}</td>
+            <td>
+              <button class="btn-edit-category" data-id="${c.id_categoria}"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn-delete-category" data-id="${c.id_categoria}"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        `).join('');
+
+        tbody.onclick = async (e) => {
+          const editBtn = e.target.closest('.btn-edit-category');
+          const deleteBtn = e.target.closest('.btn-delete-category');
+
+          if (editBtn) {
+            openEditCategoryModal(editBtn.dataset.id);
+          } else if (deleteBtn) {
+            mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar esta categoría?', async () => {
+              try {
+                const res = await fetch(`/api/admin/categorias/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar la categoría');
+                cachedCategories = null; // Invalidar caché
+                mostrarNotificacion(result.mensaje, 'exito');
+                loadCategorias();
+              } catch (err) {
+                mostrarNotificacion(err.message, 'error');
+              }
+            });
+          }
+        };
+
+        // Configurar botón de añadir
+        const addBtn = document.querySelector('.btn-add-new');
+        if (addBtn) addBtn.onclick = () => openAddCategoryModal();
+
+      } catch (err) {
+        mostrarNotificacion('Error cargando categorías: ' + err.message, 'error');
+      }
+    }
     // --- Función para abrir modal de usuario ---
     async function openEditUserModal(id) {
       try {
@@ -642,6 +707,84 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
+    // --- Abrir modal de edición de categoría ---
+    async function openEditCategoryModal(id) {
+      try {
+        const res = await fetch(`/api/admin/categorias/${id}`, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Categoría no encontrada');
+        const cat = await res.json();
+
+        const modal = document.getElementById('modal-editar-categoria');
+        setupModalCloseListeners(modal);
+        modal.style.display = 'flex';
+
+        document.getElementById('edit-categoria-id').value = cat.id_categoria;
+        document.getElementById('edit-categoria-nombre').value = cat.nombre_categoria;
+
+        const form = document.getElementById('form-editar-categoria');
+        form.onsubmit = async e => {
+          e.preventDefault();
+          const data = { nombre_categoria: document.getElementById('edit-categoria-nombre').value };
+
+          const resp = await fetch(`/api/admin/categorias/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(data)
+          });
+
+          cachedCategories = null; // Invalidar caché
+          const result = await resp.json();
+          if (resp.ok) {
+            mostrarNotificacion('Categoría actualizada correctamente.', 'exito');
+            modal.style.display = 'none';
+            loadCategorias();
+          } else {
+            mostrarNotificacion('Error al actualizar: ' + (result.mensaje || 'Error desconocido'), 'error');
+          }
+        };
+      } catch (err) {
+        mostrarNotificacion('Error al cargar datos de la categoría.', 'error');
+      }
+    }
+
+    // --- Modal de añadir categoría ---
+    async function openAddCategoryModal() {
+      const modal = document.getElementById('modal-agregar-categoria');
+      setupModalCloseListeners(modal);
+      modal.style.display = 'flex';
+
+      const form = document.getElementById('form-agregar-categoria');
+      form.reset();
+
+      form.onsubmit = async e => {
+        e.preventDefault();
+        const data = { nombre_categoria: document.getElementById('nuevo-categoria-nombre').value };
+
+        try {
+          const res = await fetch('/api/admin/categorias', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(data)
+          });
+
+          cachedCategories = null; // Invalidar caché
+          const result = await res.json();
+          if (res.ok) {
+            mostrarNotificacion('Categoría agregada correctamente.', 'exito');
+            modal.style.display = 'none';
+            loadCategorias();
+          } else {
+            mostrarNotificacion('Error al agregar: ' + (result.mensaje || 'Error desconocido'), 'error');
+          }
+        } catch (err) {
+          mostrarNotificacion('Error de conexión: ' + err.message, 'error');
+        }
+      };
+    }
+
+
     // --- Modal de añadir proveedor
     async function openAddSupplierModal() {
     const modal = document.getElementById('modal-agregar-proveedor');
@@ -705,23 +848,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       inputElement.insertAdjacentElement('afterend', displayElement);
     }
 
-    // Botón específico para la subida de Excel
-    const confirmBtn = document.getElementById('btn-confirm-excel-upload');
+    // Determinar qué botón de confirmación usar
+    let confirmBtnId;
+    if (inputId === 'excelProductos') {
+      confirmBtnId = 'btn-confirm-excel-upload'; // Este es el de productos
+    } else if (inputId === 'excelProveedores') {
+      confirmBtnId = 'btn-confirm-excel-upload-proveedores'; // Este es el de proveedores
+    } else if (inputId === 'excelCategorias') {
+      confirmBtnId = 'btn-confirm-excel-upload-categorias'; // Este es el de categorías
+    }
+    const confirmBtn = document.getElementById(confirmBtnId);
 
     inputElement.addEventListener('change', () => {
       if (inputElement.files && inputElement.files.length > 0) {
         const fileName = inputElement.files[0].name;
         displayElement.textContent = fileName.length > 30 ? `${fileName.substring(0, 27)}...` : fileName;
         
-        // Si es el input de Excel, mostramos el botón de confirmación
-        if (inputId === 'excelProductos' && confirmBtn) {
+        if (confirmBtn) {
           confirmBtn.style.display = 'inline-flex';
-          // Asignamos el evento de subida al botón
-          confirmBtn.onclick = () => subirExcelProductos(inputElement.files[0]);
+          // Asignar el evento de subida correcto
+          if (inputId === 'excelProductos') confirmBtn.onclick = () => subirExcelProductos(inputElement.files[0]);
+          if (inputId === 'excelProveedores') confirmBtn.onclick = () => subirExcelProveedores(inputElement.files[0]);
+          if (inputId === 'excelCategorias') confirmBtn.onclick = () => subirExcelCategorias(inputElement.files[0]);
         }
       } else {
-        displayElement.textContent = '';
+        displayElement.textContent = ''; // Limpiar el nombre del archivo si se cancela la selección
         if (inputId === 'excelProductos' && confirmBtn) {
+          confirmBtn.onclick = null; // Limpiar evento para evitar referencias a archivos antiguos
           confirmBtn.style.display = 'none';
         }
       }
@@ -827,23 +980,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       mostrarNotificacion('Error al subir Excel de productos.', 'error');
     } finally {
       // Limpiar el nombre del archivo después de un tiempo
-      if (confirmBtn) {
+      if (confirmBtn) { // Ocultar el botón después de la subida
         confirmBtn.style.display = 'none'; // Ocultar botón
         confirmBtn.disabled = false; // Rehabilitar
       }
       const fileNameDisplay = document.getElementById('excel-productos-filename');
       if (fileNameDisplay) fileNameDisplay.textContent = '';
-      document.getElementById('excelProductos').value = ''; // Limpiar el input
+      document.getElementById('excelProductos').value = '';
     }
   }
 
   // --- Añadir proveedores desde excel ---
   window.subirExcelProveedores = async function (file) {
     const formData = new FormData();
+    const confirmBtn = document.getElementById('btn-confirm-excel-upload-proveedores');
+    if (confirmBtn) confirmBtn.disabled = true;
+
     formData.append('file', file);
-    // Asumiendo que tienes un span con id="excel-proveedores-filename" en admin-suppliers.html
-    const fileNameDisplay = document.getElementById('excel-proveedores-filename');
-    if (fileNameDisplay) fileNameDisplay.textContent = file.name;
 
     try {
       const res = await fetch('/api/admin/proveedores/upload', {
@@ -858,9 +1011,47 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error al subir Excel de proveedores:', err);
       mostrarNotificacion('Error al subir Excel de proveedores.', 'error');
     } finally {
-      if (fileNameDisplay) {
-        setTimeout(() => { fileNameDisplay.textContent = ''; }, 4000);
+      if (confirmBtn) {
+        confirmBtn.style.display = 'none';
+        confirmBtn.disabled = false;
       }
+      const fileNameDisplay = document.getElementById('excel-proveedores-filename');
+      if (fileNameDisplay) fileNameDisplay.textContent = '';
+      document.getElementById('excelProveedores').value = ''; // Limpiar el input
+    }
+  }
+
+  // --- Añadir categorías desde excel ---
+  window.subirExcelCategorias = async function (file) {
+    const formData = new FormData();
+    const confirmBtn = document.getElementById('btn-confirm-excel-upload-categorias');
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/admin/categorias/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      });
+      const data = await res.json();
+      mostrarNotificacion(data.mensaje, res.ok ? 'exito' : 'error');
+      if (res.ok) {
+        cachedCategories = null; // Invalidar caché para recargar
+        loadCategorias();
+      }
+    } catch (err) {
+      console.error('Error al subir Excel de categorías:', err);
+      mostrarNotificacion('Error al subir Excel de categorías.', 'error');
+    } finally {
+      if (confirmBtn) {
+        confirmBtn.style.display = 'none';
+        confirmBtn.disabled = false;
+      }
+      const fileNameDisplay = document.getElementById('excel-categorias-filename');
+      if (fileNameDisplay) fileNameDisplay.textContent = '';
+      document.getElementById('excelCategorias').value = '';
     }
   }
 
@@ -875,6 +1066,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         if (document.getElementById('productsTable')) openAddProductModal();
         if (document.getElementById('suppliersTable')) openAddSupplierModal();
+        if (document.getElementById('categoriesTable')) openAddCategoryModal();
       }
     });
 
