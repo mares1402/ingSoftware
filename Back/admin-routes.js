@@ -534,31 +534,59 @@ router.post('/categorias', isAuthenticated, isAdmin, (req, res) => {
   if (!nombre_categoria) {
     return res.status(400).json({ mensaje: 'El nombre de la categoría es obligatorio.' });
   }
-  conexion.query(
-    'INSERT INTO CategoriaProductos (nombre_categoria) VALUES (?)',
-    [nombre_categoria],
-    (err, result) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al crear la categoría', error: err });
-      res.status(201).json({ mensaje: 'Categoría creada correctamente', id: result.insertId });
+
+  // Verificar si ya existe una categoría con ese nombre (insensible a mayúsculas/minúsculas)
+  conexion.query('SELECT id_categoria FROM CategoriaProductos WHERE LOWER(nombre_categoria) = LOWER(?)', [nombre_categoria], (err, results) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al verificar la categoría.', error: err });
     }
-  );
+
+    if (results.length > 0) {
+      return res.status(409).json({ mensaje: 'Ya existe una categoría con ese nombre.' });
+    }
+
+    // Si no existe, proceder con la inserción
+    conexion.query(
+      'INSERT INTO CategoriaProductos (nombre_categoria) VALUES (?)',
+      [nombre_categoria],
+      (err, result) => {
+        if (err) return res.status(500).json({ mensaje: 'Error al crear la categoría', error: err });
+        res.status(201).json({ mensaje: 'Categoría creada correctamente', id: result.insertId });
+      }
+    );
+  });
 });
 
 // Actualizar categoría
 router.put('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
   const { id } = req.params;
   const { nombre_categoria } = req.body;
+
   if (!nombre_categoria) {
     return res.status(400).json({ mensaje: 'El nombre de la categoría es obligatorio.' });
   }
-  conexion.query(
-    'UPDATE CategoriaProductos SET nombre_categoria = ? WHERE id_categoria = ?',
-    [nombre_categoria, id],
-    (err) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al actualizar la categoría', error: err });
-      res.json({ mensaje: 'Categoría actualizada correctamente' });
+
+  // Verificar si OTRA categoría ya tiene ese nombre
+  const checkSql = 'SELECT id_categoria FROM CategoriaProductos WHERE LOWER(nombre_categoria) = LOWER(?) AND id_categoria != ?';
+  conexion.query(checkSql, [nombre_categoria, id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al verificar duplicados.', error: err });
     }
-  );
+
+    if (results.length > 0) {
+      return res.status(409).json({ mensaje: 'Ya existe otra categoría con ese nombre.' });
+    }
+
+    // Si no hay duplicados, proceder a actualizar
+    conexion.query(
+      'UPDATE CategoriaProductos SET nombre_categoria = ? WHERE id_categoria = ?',
+      [nombre_categoria, id],
+      (err) => {
+        if (err) return res.status(500).json({ mensaje: 'Error al actualizar la categoría.', error: err });
+        res.json({ mensaje: 'Categoría actualizada correctamente' });
+      }
+    );
+  });
 });
 
 // Eliminar categoría
