@@ -87,64 +87,78 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
 
   // --- PRODUCTOS ---
   // === SUBIR PRODUCTOS DESDE EXCEL ===
-  router.post('/productos/upload', isAuthenticated, isAdmin, upload.single('file'), (req, res) => {
+  router.post('/productos/upload', isAuthenticated, isAdmin, upload.single('file'), async (req, res) => {
     try {
       const workbook = XLSX.readFile(req.file.path);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(sheet);
 
-      // data = [{ Nombre, Categoria, Proveedor }, ...]
-
-      const inserts = data.map(row => [row.Nombre, row.Categoria]);
-
-      conexion.getConnection((err, conn) => {
-        if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
-
-        conn.beginTransaction(err => {
-          if (err) {
-            conn.release();
-            return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
-          }
-
-          const sqlProductos = `INSERT INTO Productos (nombre_producto, id_categoria) VALUES ?`;
-          conn.query(sqlProductos, [inserts], (err, result) => {
-            if (err) {
-              return conn.rollback(() => {
-                conn.release();
-                res.status(500).json({ mensaje: 'Error al insertar productos', error: err });
-              });
-            }
-
-            // Asociar proveedores
-            const productoIds = Array.from({ length: result.affectedRows }, (_, i) => result.insertId + i);
-            const productoProveedor = data.map((row, idx) => [productoIds[idx], row.Proveedor]);
-
-            const sqlPP = `INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES ?`;
-            conn.query(sqlPP, [productoProveedor], (err) => {
-              if (err) {
-                return conn.rollback(() => {
-                  conn.release();
-                  res.status(500).json({ mensaje: 'Error al asociar proveedores', error: err });
-                });
-              }
-
-              conn.commit(err => {
-                if (err) {
-                  return conn.rollback(() => {
-                    conn.release();
-                    res.status(500).json({ mensaje: 'Error al confirmar inserción', error: err });
-                  });
-                }
-
-                conn.release();
-                res.json({ mensaje: `Se insertaron ${result.affectedRows} productos correctamente.` });
-              });
-            });
-          });
+      // Validación de columnas
+      if (data.length > 0 && !('Nombre' in data[0] && 'Categoria' in data[0] && 'Proveedor' in data[0])) {
+        return res.status(400).json({ 
+          mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de productos contenga las columnas: "Nombre", "Categoria" y "Proveedor".' 
         });
-      });
+      }
+
+      const exitos = [];
+      const errores = [];
+      const conn = await conexion.promise().getConnection();
+
+      for (const [index, row] of data.entries()) {
+        const nombre = row.Nombre;
+        const idCategoria = row.Categoria;
+        const idProveedor = row.Proveedor;
+        const fila = index + 2; // +1 por el header, +1 por el índice base 0
+
+        if (!nombre || !idCategoria || !idProveedor) {
+          errores.push(`Fila ${fila}: Faltan datos esenciales (Nombre, Categoria o Proveedor).`);
+          continue;
+        }
+
+        try {
+          await conn.beginTransaction();
+          
+          const [productoResult] = await conn.query(
+            'INSERT INTO Productos (nombre_producto, id_categoria) VALUES (?, ?)',
+            [nombre, idCategoria]
+          );
+          const idProducto = productoResult.insertId;
+
+          await conn.query(
+            'INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)',
+            [idProducto, idProveedor]
+          );
+
+          await conn.commit();
+          exitos.push(nombre);
+        } catch (error) {
+          await conn.rollback();
+          let motivo = 'Error desconocido.';
+          if (error.code === 'ER_NO_REFERENCED_ROW_2') motivo = 'La categoría o el proveedor no existen.';
+          if (error.code === 'ER_DUP_ENTRY') motivo = 'El producto ya existe.';
+          errores.push(`Fila ${fila} (${nombre}): ${motivo}`);
+        }
+      }
+
+      conn.release();
+
+      let mensaje = `Proceso completado. ${exitos.length} productos agregados.`;
+      if (errores.length > 0) {
+        mensaje += `\n${errores.length} errores:\n- ${errores.join('\n- ')}`;
+      }
+
+      res.json({ mensaje });
+
     } catch (err) {
-      res.status(500).json({ mensaje: 'Error al procesar archivo Excel', error: err });
+      console.error("Error procesando Excel de productos:", err);
+      res.status(500).json({ mensaje: 'Error grave al procesar archivo Excel.', error: err.message });
+    } finally {
+      // Asegurarse de eliminar el archivo temporal
+      if (req.file && req.file.path) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Error al eliminar archivo temporal:", err);
+        });
+      }
     }
   });
 
@@ -382,30 +396,52 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
 
 // --- PROVEEDORES ---
 // === CARGAR PROVEEDORES DESDE EXCEL ===
-router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file'), (req, res) => {
+router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file'), async (req, res) => {
   try {
     const workbook = XLSX.readFile(req.file.path);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet);
 
-    // data = [{ Nombre, Telefono, Correo, Direccion }, ...]
+    // Validación de columnas
+    if (data.length > 0 && !('Nombre' in data[0] && 'Telefono' in data[0] && 'Correo' in data[0] && 'Direccion' in data[0])) {
+      return res.status(400).json({ 
+        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de proveedores contenga las columnas: "Nombre", "Telefono", "Correo" y "Direccion".' 
+      });
+    }
 
-    const inserts = data.map(row => [
-      row.Nombre,
-      row.Telefono,
-      row.Correo,
-      row.Direccion
-    ]);
+    const exitos = [];
+    const errores = [];
 
-    const sql = `INSERT INTO Proveedores (nombre_proveedor, telefono, correo, direccion)
-                 VALUES ?`;
+    for (const [index, row] of data.entries()) {
+      const nombre = row.Nombre;
+      const fila = index + 2;
 
-    conexion.query(sql, [inserts], (err, result) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al insertar proveedores', error: err });
-      res.json({ mensaje: `Se agregaron ${result.affectedRows} proveedores correctamente.` });
-    });
+      if (!nombre) {
+        errores.push(`Fila ${fila}: Falta el nombre del proveedor.`);
+        continue;
+      }
+
+      try {
+        await conexion.promise().query(
+          'INSERT INTO Proveedores (nombre_proveedor, telefono, correo, direccion) VALUES (?, ?, ?, ?)',
+          [nombre, row.Telefono, row.Correo, row.Direccion]
+        );
+        exitos.push(nombre);
+      } catch (error) {
+        let motivo = 'Error desconocido.';
+        if (error.code === 'ER_DUP_ENTRY') motivo = 'El nombre o correo ya existe.';
+        errores.push(`Fila ${fila} (${nombre}): ${motivo}`);
+      }
+    }
+
+    let mensaje = `Proceso completado. ${exitos.length} proveedores agregados.`;
+    if (errores.length > 0) {
+      mensaje += `\n${errores.length} errores:\n- ${errores.join('\n- ')}`;
+    }
+    res.json({ mensaje });
+
   } catch (err) {
-    res.status(500).json({ mensaje: 'Error al procesar archivo Excel', error: err });
+    res.status(500).json({ mensaje: 'Error grave al procesar archivo Excel.', error: err.message });
   }
 });
 
@@ -430,28 +466,59 @@ router.get('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
 // Crear proveedor
 router.post('/proveedores', isAuthenticated, isAdmin, (req, res) => {
   const { nombre_proveedor, telefono, correo, direccion } = req.body;
-  conexion.query(
-    'INSERT INTO Proveedores (nombre_proveedor, telefono, correo, direccion) VALUES (?, ?, ?, ?)',
-    [nombre_proveedor, telefono, correo, direccion],
-    (err, result) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al crear proveedor', error: err });
-      res.json({ mensaje: 'Proveedor creado correctamente', id: result.insertId });
+  if (!nombre_proveedor) {
+    return res.status(400).json({ mensaje: 'El nombre del proveedor es obligatorio.' });
+  }
+
+  // Verificar si ya existe un proveedor con ese nombre (insensible a mayúsculas/minúsculas)
+  conexion.query('SELECT id_proveedor FROM Proveedores WHERE LOWER(nombre_proveedor) = LOWER(?)', [nombre_proveedor], (err, results) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al verificar el proveedor.', error: err });
     }
-  );
+
+    if (results.length > 0) {
+      return res.status(409).json({ mensaje: 'Ya existe un proveedor con ese nombre.' });
+    }
+
+    // Si no existe, proceder con la inserción
+    conexion.query(
+      'INSERT INTO Proveedores (nombre_proveedor, telefono, correo, direccion) VALUES (?, ?, ?, ?)',
+      [nombre_proveedor, telefono, correo, direccion],
+      (err, result) => {
+        if (err) return res.status(500).json({ mensaje: 'Error al crear proveedor', error: err });
+        res.status(201).json({ mensaje: 'Proveedor creado correctamente', id: result.insertId });
+      }
+    );
+  });
 });
 
 // Actualizar proveedor
 router.put('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
   const { id } = req.params;
   const { nombre_proveedor, telefono, correo, direccion } = req.body;
-  conexion.query(
-    'UPDATE Proveedores SET nombre_proveedor=?, telefono=?, correo=?, direccion=? WHERE id_proveedor=?',
-    [nombre_proveedor, telefono, correo, direccion, id],
-    (err) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al actualizar proveedor', error: err });
-      res.json({ mensaje: 'Proveedor actualizado correctamente' });
+
+  if (!nombre_proveedor) {
+    return res.status(400).json({ mensaje: 'El nombre del proveedor es obligatorio.' });
+  }
+
+  // Verificar si OTRO proveedor ya tiene ese nombre
+  const checkSql = 'SELECT id_proveedor FROM Proveedores WHERE LOWER(nombre_proveedor) = LOWER(?) AND id_proveedor != ?';
+  conexion.query(checkSql, [nombre_proveedor, id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al verificar duplicados.', error: err });
     }
-  );
+
+    if (results.length > 0) {
+      return res.status(409).json({ mensaje: 'Ya existe otro proveedor con ese nombre.' });
+    }
+
+    // Si no hay duplicados, proceder a actualizar
+    const updateSql = 'UPDATE Proveedores SET nombre_proveedor=?, telefono=?, correo=?, direccion=? WHERE id_proveedor=?';
+    conexion.query(updateSql, [nombre_proveedor, telefono, correo, direccion, id], (err) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al actualizar el proveedor.', error: err });
+      res.json({ mensaje: 'Proveedor actualizado correctamente' });
+    });
+  });
 });
 
 // Eliminar proveedor
@@ -484,29 +551,46 @@ router.delete('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
 // --- CATEGORÍAS ---
 
 // === CARGAR CATEGORÍAS DESDE EXCEL ===
-router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'), (req, res) => {
+router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'), async (req, res) => {
   try {
     const workbook = XLSX.readFile(req.file.path);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet);
 
-    // Se espera una columna "Nombre" en el Excel
-    // data = [{ Nombre: 'Categoría 1' }, { Nombre: 'Categoría 2' }, ...]
-
-    const inserts = data.map(row => [row.Nombre]);
-
-    if (inserts.length === 0) {
-      return res.status(400).json({ mensaje: 'El archivo Excel está vacío o no tiene la columna "Nombre".' });
+    // Validación de columnas
+    if (data.length > 0 && !('Nombre' in data[0])) {
+      return res.status(400).json({ 
+        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de categorías contenga la columna "Nombre".' 
+      });
     }
 
-    const sql = `INSERT INTO CategoriaProductos (nombre_categoria) VALUES ?`;
+    const exitos = [];
+    const errores = [];
 
-    conexion.query(sql, [inserts], (err, result) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al insertar categorías', error: err });
-      res.json({ mensaje: `Se agregaron ${result.affectedRows} categorías correctamente.` });
-    });
+    for (const [index, row] of data.entries()) {
+      const nombre = row.Nombre;
+      const fila = index + 2;
+
+      if (!nombre) {
+        errores.push(`Fila ${fila}: Falta el nombre de la categoría.`);
+        continue;
+      }
+
+      try {
+        await conexion.promise().query('INSERT INTO CategoriaProductos (nombre_categoria) VALUES (?)', [nombre]);
+        exitos.push(nombre);
+      } catch (error) {
+        errores.push(`Fila ${fila} (${nombre}): ${error.code === 'ER_DUP_ENTRY' ? 'Ya existe.' : 'Error desconocido.'}`);
+      }
+    }
+
+    let mensaje = `Proceso completado. ${exitos.length} categorías agregadas.`;
+    if (errores.length > 0) {
+      mensaje += `\n${errores.length} errores:\n- ${errores.join('\n- ')}`;
+    }
+    res.json({ mensaje });
   } catch (err) {
-    res.status(500).json({ mensaje: 'Error al procesar archivo Excel', error: err });
+    res.status(500).json({ mensaje: 'Error grave al procesar archivo Excel.', error: err.message });
   }
 });
 

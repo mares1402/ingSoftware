@@ -860,6 +860,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const confirmBtn = document.getElementById(confirmBtnId);
 
     inputElement.addEventListener('change', () => {
+      // Limpiar el nombre de archivo y ocultar el botón de confirmación al inicio
+      displayElement.textContent = '';
+      if (confirmBtn) confirmBtn.style.display = 'none';
+
+      // Validación de formato de archivo para Excel
+      if (inputId.startsWith('excel')) {
+        const file = inputElement.files[0];
+        if (file && !/\.(xlsx|xls)$/i.test(file.name)) {
+          mostrarNotificacion('Formato de archivo no válido. Solo se permiten archivos de Excel (.xlsx, .xls).', 'error');
+          inputElement.value = ''; // Limpiar el input
+          return;
+        }
+      }
       if (inputElement.files && inputElement.files.length > 0) {
         const fileName = inputElement.files[0].name;
         displayElement.textContent = fileName.length > 30 ? `${fileName.substring(0, 27)}...` : fileName;
@@ -908,6 +921,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modal = document.getElementById('modal-agregar-producto');
     setupModalCloseListeners(modal);
     modal.style.display = 'flex';
+    
+    const form = document.getElementById('form-agregar-producto');
+    form.reset(); // Limpiar el formulario al abrir el modal
 
     await cargarCategoriasSelect('nuevo-producto-categoria');
     await cargarProveedoresSelect('nuevo-producto-proveedor');
@@ -916,7 +932,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     addFormatHint('nuevo-producto-imagen');
     setupFileInputListener('nuevo-producto-imagen', 'nuevo-producto-filename');
 
-    const form = document.getElementById('form-agregar-producto');
     form.onsubmit = async e => {
       e.preventDefault();
       
@@ -942,6 +957,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (res.ok) {
           mostrarNotificacion('Producto agregado correctamente.', 'exito');
           modal.style.display = 'none';
+          form.reset(); // Limpiar el formulario para la próxima vez
           loadProductos();
         } else {
           mostrarNotificacion('Error al agregar producto: ' + (result.mensaje || 'Error desconocido'), 'error');
