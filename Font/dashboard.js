@@ -137,6 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
           if (section === 'admin-products.html') loadProductos();
           if (section === 'admin-suppliers.html') loadProveedores();
+          if (section === 'admin-categories.html') loadCategorias();
           // Aquí podrías añadir la carga de datos para las cotizaciones en el futuro
 
           // Configurar listener para el input de Excel
@@ -173,6 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <li><a href="#" class="nav-link" data-section="admin-users.html"><i class="fa-solid fa-users"></i> Usuarios</a></li>
           <li><a href="#" class="nav-link" data-section="admin-products.html"><i class="fa-solid fa-box-archive"></i> Productos</a></li>
           <li><a href="#" class="nav-link" data-section="admin-suppliers.html"><i class="fa-solid fa-dolly"></i> Proveedores</a></li>
+          <li><a href="#" class="nav-link" data-section="admin-categories.html"><i class="fa-solid fa-dolly"></i> Categorias</a></li>
         </ul>
       `;
     } else {
@@ -230,6 +232,34 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     };
 
+    // --- VALIDACIONES GENERALES ---
+    function soloLetras(e) {
+      const char = String.fromCharCode(e.which);
+      if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]$/.test(char)) {
+        e.preventDefault();
+      }
+    }
+
+    function soloNumeros(e) {
+      const char = String.fromCharCode(e.which);
+      if (!/[0-9]/.test(char)) {
+        e.preventDefault();
+      }
+    }
+
+    function validarCorreo(email) {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return regex.test(email);
+    }
+
+    function validarUsuario(usuario) {
+      return /^[a-zA-Z0-9_-]+$/.test(usuario);
+    }
+
+    function validarPassword(pass) {
+      return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(pass);
+    }
+
     // --- Cargar categorías en el select ---
     async function cargarCategoriasSelect(selectId, selectedId = null) {
       if (!cachedCategories) {
@@ -266,6 +296,83 @@ document.addEventListener('DOMContentLoaded', async () => {
       } catch (err) {
         console.error('Error al cargar proveedores:', err);
         document.getElementById(selectId).innerHTML = '<option value="">Error al cargar</option>';
+      }
+    }
+
+    // --- Cargar categorías ---
+    async function loadCategorias() {
+      try {
+        const res = await fetch('/api/admin/categorias', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('No se pudieron obtener las categorías');
+        const categorias = await res.json();
+
+        const tbody = document.querySelector('#categoriesTable tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = categorias.map(c => `
+          <tr>
+            <td>${c.id_categoria}</td>
+            <td>${c.nombre_categoria}</td>
+            <td>
+              <button class="btn-edit-category" data-id="${c.id_categoria}">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button class="btn-delete-category" data-id="${c.id_categoria}">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        // --- Delegación de eventos para editar/eliminar ---
+        tbody.onclick = async (e) => {
+          const editBtn = e.target.closest('.btn-edit-category');
+          const deleteBtn = e.target.closest('.btn-delete-category');
+
+          if (editBtn) {
+            openEditCategoryModal(editBtn.dataset.id);
+          } else if (deleteBtn) {
+            mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar esta categoría?', async () => {
+              try {
+                const res = await fetch(`/api/admin/categorias/${deleteBtn.dataset.id}`, { 
+                  method: 'DELETE', 
+                  credentials: 'same-origin' 
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar la categoría');
+                mostrarNotificacion(result.mensaje, 'exito');
+                loadCategorias();
+              } catch (err) {
+                mostrarNotificacion(err.message, 'error');
+              }
+            });
+          }
+        };
+
+        // --- BOTÓN AGREGAR NUEVA CATEGORÍA ---
+        const btnAdd = document.querySelector('.btn-add-new');
+        if (btnAdd) {
+          btnAdd.onclick = openAddCategoryModal;
+        }
+
+        // --- SUBIDA DESDE EXCEL ---
+        const excelInput = document.getElementById('excelCategorias');
+        if (excelInput) {
+          excelInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileNameDisplay = document.getElementById('excel-categorias-filename');
+            const confirmBtn = document.getElementById('btn-confirm-excel-upload');
+            fileNameDisplay.textContent = file.name;
+            confirmBtn.style.display = 'inline-block';
+            confirmBtn.onclick = () => subirExcelCategorias(file);
+          });
+        }
+
+      } catch (err) {
+        console.error('Error al cargar categorías:', err);
+        mostrarNotificacion('Error al cargar categorías: ' + err.message, 'error');
       }
     }
 
@@ -427,10 +534,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // --- Función para abrir modal de usuario ---
+    // --- Función para abrir modal de edicion de usuario ---
     async function openEditUserModal(id) {
       try {
-        // Cargar el HTML del modal de edición de usuario si no existe
+        // Cargar modal si aún no está en el DOM
         if (!document.getElementById('modal-editar-usuario')) {
           await loadModal('modal-editar-usuario.html');
         }
@@ -440,9 +547,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const u = await res.json();
 
         const modal = document.getElementById('modal-editar-usuario');
-        setupModalCloseListeners(modal); // Asegurarse de que el cierre funcione
+        setupModalCloseListeners(modal);
         modal.style.display = 'flex';
 
+        // --- Asignar valores actuales ---
         document.getElementById('edit-usuario-id').value = u.id_usuario;
         document.getElementById('edit-usuario-nombre').value = u.nombre;
         document.getElementById('edit-usuario-paterno').value = u.paterno;
@@ -452,18 +560,79 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('edit-usuario-genero').value = u.genero || 'Masculino';
         document.getElementById('edit-usuario-tipo').value = u.tipo_usuario;
 
-        // --- Listener correcto, solo uno ---
+        // --- Referencias a inputs ---
+        const nombreInput = document.getElementById('edit-usuario-nombre');
+        const paternoInput = document.getElementById('edit-usuario-paterno');
+        const maternoInput = document.getElementById('edit-usuario-materno');
+        const correoInput = document.getElementById('edit-usuario-correo');
+        const telefonoInput = document.getElementById('edit-usuario-telefono');
+
+        // --- Restricciones de tipo de carácter ---
+        const soloLetras = e => {
+          const char = String.fromCharCode(e.which);
+          if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]$/.test(char)) e.preventDefault();
+        };
+
+        const soloNumeros = e => {
+          const char = String.fromCharCode(e.which);
+          if (!/[0-9]/.test(char)) e.preventDefault();
+        };
+
+        // Aplicar restricciones de tipo
+        nombreInput.addEventListener('keypress', soloLetras);
+        paternoInput.addEventListener('keypress', soloLetras);
+        maternoInput.addEventListener('keypress', soloLetras);
+        telefonoInput.addEventListener('keypress', soloNumeros);
+
+        // --- Restricciones de longitud (según base de datos) ---
+        nombreInput.maxLength = 30;
+        paternoInput.maxLength = 20;
+        maternoInput.maxLength = 20;
+        correoInput.maxLength = 40;
+        telefonoInput.maxLength = 20;
+
+        // --- Validaciones extra ---
+        const validarCorreo = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
         const form = document.getElementById('form-editar-usuario');
         form.onsubmit = async e => {
           e.preventDefault();
 
+          // --- Validaciones antes del envío ---
+          if (!validarCorreo(correoInput.value)) {
+            mostrarNotificacion('El correo ingresado no es válido.', 'error');
+            return;
+          }
+
+          if (telefonoInput.value && telefonoInput.value.length < 10) {
+            mostrarNotificacion('El teléfono debe tener al menos 10 dígitos.', 'error');
+            return;
+          }
+
+          // Validar longitudes antes de enviar
+          const campos = [
+            { campo: nombreInput, max: 30, nombre: 'Nombre' },
+            { campo: paternoInput, max: 20, nombre: 'Apellido paterno' },
+            { campo: maternoInput, max: 20, nombre: 'Apellido materno' },
+            { campo: correoInput, max: 40, nombre: 'Correo electrónico' },
+            { campo: telefonoInput, max: 20, nombre: 'Teléfono' }
+          ];
+
+          for (const { campo, max, nombre } of campos) {
+            if (campo.value.trim().length > max) {
+              mostrarNotificacion(`${nombre} supera el límite de ${max} caracteres.`, 'error');
+              return;
+            }
+          }
+
+          // --- Datos válidos ---
           const id = document.getElementById('edit-usuario-id').value;
           const data = {
-            nombre: document.getElementById('edit-usuario-nombre').value,
-            paterno: document.getElementById('edit-usuario-paterno').value,
-            materno: document.getElementById('edit-usuario-materno').value,
-            correo: document.getElementById('edit-usuario-correo').value,
-            telefono: document.getElementById('edit-usuario-telefono').value,
+            nombre: nombreInput.value.trim(),
+            paterno: paternoInput.value.trim(),
+            materno: maternoInput.value.trim(),
+            correo: correoInput.value.trim(),
+            telefono: telefonoInput.value.trim(),
             genero: document.getElementById('edit-usuario-genero').value,
             tipo_usuario: Number(document.getElementById('edit-usuario-tipo').value)
           };
@@ -500,55 +669,58 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
+
     // --- Abrir modal de edición de producto ---
     async function openEditProductModal(id) {
       try {
-        // Limpiar el input de archivo y el texto del nombre de archivo anterior
         const imagenInput = document.getElementById('edit-producto-imagen');
-        if (imagenInput) imagenInput.value = ''; // Resetea el selector de archivo
+        if (imagenInput) imagenInput.value = '';
         const fileNameDisplay = document.getElementById('edit-producto-filename');
-        if (fileNameDisplay) fileNameDisplay.textContent = ''; // Limpia el texto del nombre
-        // --- FIN DE LA CORRECCIÓN ---
+        if (fileNameDisplay) fileNameDisplay.textContent = '';
 
         const res = await fetch(`/api/admin/productos/${id}`, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Producto no encontrado');
         const p = await res.json();
 
-      // Añadir el texto informativo de formatos
-      addFormatHint('edit-producto-imagen');
-      // Configurar el listener para mostrar el nombre del archivo de imagen
-      setupFileInputListener('edit-producto-imagen', 'edit-producto-filename');
+        addFormatHint('edit-producto-imagen');
+        setupFileInputListener('edit-producto-imagen', 'edit-producto-filename');
 
         const modal = document.getElementById('modal-editar-producto');
         setupModalCloseListeners(modal);
         modal.style.display = 'flex';
 
         document.getElementById('edit-producto-id').value = p.id_producto;
-        document.getElementById('edit-producto-nombre').value = p.nombre_producto;        
+        const inputNombre = document.getElementById('edit-producto-nombre');
+        inputNombre.value = p.nombre_producto;
 
-        // --- Lógica de la imagen ---
+        // Aplicar restricciones al campo de nombre
+        inputNombre.maxLength = 50;
+        inputNombre.addEventListener('input', () => {
+          const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
+          if (!regex.test(inputNombre.value)) {
+            inputNombre.value = inputNombre.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+            mostrarNotificacion('Solo se permiten letras y espacios en el nombre.', 'advertencia');
+          }
+        });
+
         const imgContainer = document.getElementById('edit-imagen-container');
         const imgPreview = document.getElementById('edit-imagen-preview');
         const removeImgBtn = document.getElementById('btn-remove-image');
-        let removeImageFlag = false; // Flag para saber si se debe eliminar la imagen
+        let removeImageFlag = false;
 
-        // Mostrar imagen actual
         if (p.ruta_imagen) {
           imgPreview.src = p.ruta_imagen;
           imgContainer.style.display = 'block';
-          removeImageFlag = false;
         } else {
           imgContainer.style.display = 'none';
         }
 
-        // Evento para el botón de quitar imagen
         removeImgBtn.onclick = () => {
           imgContainer.style.display = 'none';
-          imagenInput.value = ''; // Limpiar el input file
-          removeImageFlag = true; // Marcar para eliminación en el backend
+          imagenInput.value = '';
+          removeImageFlag = true;
         };
 
-        // --- OPTIMIZACIÓN: Usar funciones de carga con caché y ID seleccionado ---
         await cargarCategoriasSelect('edit-producto-categoria', p.id_categoria);
         await cargarProveedoresSelect('edit-producto-proveedor', p.id_proveedor);
 
@@ -556,23 +728,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.onsubmit = async e => {
           e.preventDefault();
 
+          const nombre = inputNombre.value.trim();
+          if (!nombre) {
+            mostrarNotificacion('El nombre del producto no puede estar vacío.', 'error');
+            return;
+          }
+          if (nombre.length > 50) {
+            mostrarNotificacion('El nombre del producto no puede exceder 50 caracteres.', 'error');
+            return;
+          }
+
           const formData = new FormData();
-          formData.append('nombre_producto', document.getElementById('edit-producto-nombre').value);
+          formData.append('nombre_producto', nombre);
           formData.append('id_categoria', document.getElementById('edit-producto-categoria').value);
-          formData.append('id_proveedor', document.getElementById('edit-producto-proveedor').value); // Añadir ID de proveedor
-          
+          formData.append('id_proveedor', document.getElementById('edit-producto-proveedor').value);
+
           if (imagenInput.files && imagenInput.files[0]) {
             formData.append('imagen_producto', imagenInput.files[0]);
           } else if (removeImageFlag) {
-            // Si el flag está activo y no se subió una nueva imagen,
-            // le decimos al backend que la quite.
             formData.append('remove_image', 'true');
           }
 
-          const resp = await fetch(`/api/admin/productos/${id}`, { // Cambiado data a formData
+          const resp = await fetch(`/api/admin/productos/${id}`, {
             method: 'PUT',
             credentials: 'same-origin',
-            body: formData // Enviar FormData directamente
+            body: formData
           });
 
           const result = await resp.json();
@@ -601,21 +781,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupModalCloseListeners(modal);
         modal.style.display = 'flex';
 
-        document.getElementById('edit-proveedor-id').value = p.id_proveedor;
-        document.getElementById('edit-nombre').value = p.nombre_proveedor;
-        document.getElementById('edit-telefono').value = p.telefono || '';
-        document.getElementById('edit-correo').value = p.correo || '';
-        document.getElementById('edit-direccion').value = p.direccion || '';
+        const inputNombre = document.getElementById('edit-nombre');
+        const inputTelefono = document.getElementById('edit-telefono');
+        const inputCorreo = document.getElementById('edit-correo');
+        const inputDireccion = document.getElementById('edit-direccion');
+
+        inputNombre.value = p.nombre_proveedor;
+        inputTelefono.value = p.telefono || '';
+        inputCorreo.value = p.correo || '';
+        inputDireccion.value = p.direccion || '';
+
+        // --- Restricciones de longitud ---
+        inputNombre.maxLength = 50;
+        inputTelefono.maxLength = 20;
+        inputCorreo.maxLength = 40;
+        inputDireccion.maxLength = 100;
+
+        // --- Validaciones de tipo de carácter ---
+        inputNombre.addEventListener('input', () => {
+          inputNombre.value = inputNombre.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+        });
+
+        inputTelefono.addEventListener('input', () => {
+          inputTelefono.value = inputTelefono.value.replace(/[^0-9+\-\s]/g, '');
+        });
+
+        inputDireccion.addEventListener('input', () => {
+          inputDireccion.value = inputDireccion.value.replace(/[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñ.,#\-\s]/g, '');
+        });
 
         const form = document.getElementById('form-editar-proveedor');
         form.onsubmit = async e => {
           e.preventDefault();
 
+          const nombre = inputNombre.value.trim();
+          const correo = inputCorreo.value.trim();
+
+          // Validaciones extra
+          if (!nombre) {
+            mostrarNotificacion('El nombre del proveedor no puede estar vacío.', 'error');
+            return;
+          }
+          if (nombre.length > 50) {
+            mostrarNotificacion('El nombre no puede exceder 50 caracteres.', 'error');
+            return;
+          }
+          if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+            mostrarNotificacion('El formato del correo no es válido.', 'error');
+            return;
+          }
+
           const data = {
-            nombre_proveedor: document.getElementById('edit-nombre').value,
-            telefono: document.getElementById('edit-telefono').value,
-            correo: document.getElementById('edit-correo').value,
-            direccion: document.getElementById('edit-direccion').value
+            nombre_proveedor: nombre,
+            telefono: inputTelefono.value.trim(),
+            correo,
+            direccion: inputDireccion.value.trim()
           };
 
           const resp = await fetch(`/api/admin/proveedores/${id}`, {
@@ -625,9 +845,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             body: JSON.stringify(data)
           });
 
-        // Invalidar caché de proveedores para que se recargue la próxima vez
-        cachedSuppliers = null;
+          cachedSuppliers = null;
           const result = await resp.json();
+
           if (resp.ok) {
             mostrarNotificacion('Proveedor actualizado correctamente.', 'exito');
             modal.style.display = 'none';
@@ -644,47 +864,88 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Modal de añadir proveedor
     async function openAddSupplierModal() {
-    const modal = document.getElementById('modal-agregar-proveedor');
-    setupModalCloseListeners(modal);
-    modal.style.display = 'flex';
+      const modal = document.getElementById('modal-agregar-proveedor');
+      setupModalCloseListeners(modal);
+      modal.style.display = 'flex';
 
-    const form = document.getElementById('form-agregar-proveedor');
-    form.reset();
+      const form = document.getElementById('form-agregar-proveedor');
+      form.reset();
 
-    form.onsubmit = async e => {
-      e.preventDefault();
+      const inputNombre = document.getElementById('nuevo-proveedor-nombre');
+      const inputTelefono = document.getElementById('nuevo-proveedor-telefono');
+      const inputCorreo = document.getElementById('nuevo-proveedor-correo');
+      const inputDireccion = document.getElementById('nuevo-proveedor-direccion');
 
-      const data = {
-        nombre_proveedor: document.getElementById('nuevo-proveedor-nombre').value,
-        telefono: document.getElementById('nuevo-proveedor-telefono').value,
-        correo: document.getElementById('nuevo-proveedor-correo').value,
-        direccion: document.getElementById('nuevo-proveedor-direccion').value
-      };
+      // --- Restricciones de longitud ---
+      inputNombre.maxLength = 50;
+      inputTelefono.maxLength = 20;
+      inputCorreo.maxLength = 40;
+      inputDireccion.maxLength = 100;
 
-      try {
-        const res = await fetch('/api/admin/proveedores', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify(data)
-        });
+      // --- Validaciones de tipo de carácter ---
+      inputNombre.addEventListener('input', () => {
+        inputNombre.value = inputNombre.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+      });
 
-        // Invalidar caché de proveedores para que se recargue la próxima vez
-        cachedSuppliers = null;
-        const result = await res.json();
-        if (res.ok) {
-          mostrarNotificacion('Proveedor agregado correctamente.', 'exito');
-          modal.style.display = 'none';
-          loadProveedores();
-        } else {
-          mostrarNotificacion('Error al agregar proveedor: ' + (result.mensaje || 'Error desconocido'), 'error');
+      inputTelefono.addEventListener('input', () => {
+        inputTelefono.value = inputTelefono.value.replace(/[^0-9+\-\s]/g, '');
+      });
+
+      inputDireccion.addEventListener('input', () => {
+        inputDireccion.value = inputDireccion.value.replace(/[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñ.,#\-\s]/g, '');
+      });
+
+      form.onsubmit = async e => {
+        e.preventDefault();
+
+        const nombre = inputNombre.value.trim();
+        const correo = inputCorreo.value.trim();
+
+        // Validaciones extra
+        if (!nombre) {
+          mostrarNotificacion('El nombre del proveedor no puede estar vacío.', 'error');
+          return;
         }
-      } catch (err) {
-        console.error(err);
-        mostrarNotificacion('Error al agregar proveedor: ' + err.message, 'error');
-      }
-    };
-  }
+        if (nombre.length > 50) {
+          mostrarNotificacion('El nombre no puede exceder 50 caracteres.', 'error');
+          return;
+        }
+        if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+          mostrarNotificacion('El formato del correo no es válido.', 'error');
+          return;
+        }
+
+        const data = {
+          nombre_proveedor: nombre,
+          telefono: inputTelefono.value.trim(),
+          correo,
+          direccion: inputDireccion.value.trim()
+        };
+
+        try {
+          const res = await fetch('/api/admin/proveedores', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(data)
+          });
+
+          cachedSuppliers = null;
+          const result = await res.json();
+
+          if (res.ok) {
+            mostrarNotificacion('Proveedor agregado correctamente.', 'exito');
+            modal.style.display = 'none';
+            loadProveedores();
+          } else {
+            mostrarNotificacion('Error al agregar proveedor: ' + (result.mensaje || 'Error desconocido'), 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          mostrarNotificacion('Error al agregar proveedor: ' + err.message, 'error');
+        }
+      };
+    }
 
   /**
    * Actualiza un elemento span con el nombre del archivo seleccionado en un input.
@@ -759,20 +1020,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     await cargarCategoriasSelect('nuevo-producto-categoria');
     await cargarProveedoresSelect('nuevo-producto-proveedor');
 
-    // Añadir el texto informativo de formatos
     addFormatHint('nuevo-producto-imagen');
     setupFileInputListener('nuevo-producto-imagen', 'nuevo-producto-filename');
+
+    const inputNombre = document.getElementById('nuevo-producto-nombre');
+    inputNombre.maxLength = 50; // Restricción de longitud
+
+    // Permitir solo caracteres válidos
+    inputNombre.addEventListener('input', () => {
+      const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
+      if (!regex.test(inputNombre.value)) {
+        inputNombre.value = inputNombre.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+        mostrarNotificacion('Solo se permiten letras y espacios en el nombre.', 'advertencia');
+      }
+    });
 
     const form = document.getElementById('form-agregar-producto');
     form.onsubmit = async e => {
       e.preventDefault();
-      
-      // Usar siempre FormData para ser consistente con la subida de archivos
+
+      const nombre = inputNombre.value.trim();
+      if (!nombre) {
+        mostrarNotificacion('El nombre del producto no puede estar vacío.', 'error');
+        return;
+      }
+      if (nombre.length > 50) {
+        mostrarNotificacion('El nombre del producto no puede exceder 50 caracteres.', 'error');
+        return;
+      }
+
       const formData = new FormData();
-      formData.append('nombre_producto', document.getElementById('nuevo-producto-nombre').value);
+      formData.append('nombre_producto', nombre);
       formData.append('id_categoria', document.getElementById('nuevo-producto-categoria').value);
       formData.append('id_proveedor', document.getElementById('nuevo-producto-proveedor').value);
-      
+
       const imagenInput = document.getElementById('nuevo-producto-imagen');
       if (imagenInput.files && imagenInput.files[0]) {
         formData.append('imagen_producto', imagenInput.files[0]);
@@ -782,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch('/api/admin/productos', {
           method: 'POST',
           credentials: 'same-origin',
-          body: formData // Enviar FormData
+          body: formData
         });
 
         const result = await res.json();
@@ -795,7 +1076,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       } catch (err) {
         console.error(err);
-        // Captura específica para el error de formato de archivo
         if (err.message.includes('Formato de archivo no válido')) {
           mostrarNotificacion('Formato de archivo no válido. Solo se permiten imágenes.', 'error');
         } else {
@@ -805,11 +1085,156 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
+  // === MODAL: EDITAR CATEGORÍA ===
+  async function openEditCategoryModal(id) {
+    try {
+      const res = await fetch(`/api/admin/categorias/${id}`, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Categoría no encontrada');
+      const categoria = await res.json();
+
+      const modal = document.getElementById('modal-editar-categoria');
+      setupModalCloseListeners(modal);
+      modal.style.display = 'flex';
+
+      // Cargar datos en el formulario
+      document.getElementById('edit-categoria-id').value = categoria.id_categoria;
+      document.getElementById('edit-categoria-nombre').value = categoria.nombre_categoria;
+
+      // Validaciones de entrada
+      const nombreInput = document.getElementById('edit-categoria-nombre');
+      nombreInput.addEventListener('input', e => {
+        // Máximo 50 caracteres
+        if (e.target.value.length > 50) {
+          e.target.value = e.target.value.slice(0, 50);
+        }
+        // Solo letras y espacios
+        e.target.value = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+      });
+
+      const form = document.getElementById('form-editar-categoria');
+      form.onsubmit = async e => {
+        e.preventDefault();
+        const nombre = nombreInput.value.trim();
+
+        if (!nombre) {
+          mostrarNotificacion('El nombre no puede estar vacío.', 'error');
+          return;
+        }
+
+        try {
+          const resp = await fetch(`/api/admin/categorias/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ nombre_categoria: nombre })
+          });
+
+          const result = await resp.json();
+          if (resp.ok) {
+            mostrarNotificacion('Categoría actualizada correctamente.', 'exito');
+            modal.style.display = 'none';
+            loadCategorias();
+          } else {
+            mostrarNotificacion(result.mensaje || 'Error al actualizar categoría', 'error');
+          }
+        } catch (err) {
+          console.error('Error al actualizar categoría:', err);
+          mostrarNotificacion('Error al actualizar categoría.', 'error');
+        }
+      };
+    } catch (err) {
+      console.error('Error al cargar datos de la categoría:', err);
+      mostrarNotificacion('Error al cargar datos de la categoría.', 'error');
+    }
+  }
+
+  // === MODAL: AGREGAR NUEVA CATEGORÍA ===
+  async function openAddCategoryModal() {
+    const modal = document.getElementById('modal-agregar-categoria');
+    setupModalCloseListeners(modal);
+    modal.style.display = 'flex';
+
+    const form = document.getElementById('form-agregar-categoria');
+    form.reset();
+
+    const nombreInput = document.getElementById('nueva-categoria-nombre');
+    nombreInput.addEventListener('input', e => {
+      // Máximo 50 caracteres
+      if (e.target.value.length > 50) {
+        e.target.value = e.target.value.slice(0, 50);
+      }
+      // Solo letras y espacios
+      e.target.value = e.target.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    });
+
+    form.onsubmit = async e => {
+      e.preventDefault();
+      const nombre = nombreInput.value.trim();
+
+      if (!nombre) {
+        mostrarNotificacion('El nombre de la categoría no puede estar vacío.', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/categorias', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ nombre_categoria: nombre })
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          mostrarNotificacion('Categoría agregada correctamente.', 'exito');
+          modal.style.display = 'none';
+          loadCategorias();
+        } else {
+          mostrarNotificacion(result.mensaje || 'Error al agregar categoría.', 'error');
+        }
+      } catch (err) {
+        console.error('Error al agregar categoría:', err);
+        mostrarNotificacion('Error al agregar categoría.', 'error');
+      }
+    };
+  }
+
+  // --- Subir categorías desde Excel ---
+  async function subirExcelCategorias(file) {
+    const formData = new FormData();
+    const confirmBtn = document.getElementById('btn-confirm-excel-upload');
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/admin/categorias/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      });
+      const data = await res.json();
+      mostrarNotificacion(data.mensaje, res.ok ? 'exito' : 'error');
+      loadCategorias();
+    } catch (err) {
+      console.error('Error al subir Excel de categorías:', err);
+      mostrarNotificacion('Error al subir Excel de categorías.', 'error');
+    } finally {
+      if (confirmBtn) {
+        confirmBtn.style.display = 'none';
+        confirmBtn.disabled = false;
+      }
+      const fileNameDisplay = document.getElementById('excel-categorias-filename');
+      if (fileNameDisplay) fileNameDisplay.textContent = '';
+      document.getElementById('excelCategorias').value = '';
+    }
+  }
+
   // --- Añadir productos desde excel ---
   window.subirExcelProductos = async function (file) {
     const formData = new FormData();
     const confirmBtn = document.getElementById('btn-confirm-excel-upload');
-    if (confirmBtn) confirmBtn.disabled = true; // Deshabilitar botón para evitar doble click
+    if (confirmBtn) confirmBtn.disabled = true; // Evita doble clic
 
     formData.append('file', file);
 
@@ -819,23 +1244,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         body: formData,
         credentials: 'same-origin'
       });
-      const data = await res.json();
-      mostrarNotificacion(data.mensaje, res.ok ? 'exito' : 'error');
-      loadProductos();
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error('Respuesta inválida del servidor');
+      }
+
+      if (res.ok) {
+        // ✅ Carga exitosa
+        const resumen = data.resumen
+          ? ` (${data.resumen.insertados} insertados, ${data.resumen.duplicados} duplicados, ${data.resumen.omitidos} omitidos)`
+          : '';
+        mostrarNotificacion(`Carga completada correctamente${resumen}.`, 'exito');
+        await loadProductos();
+      } else {
+        // ⚠️ Carga con errores de validación u otro tipo
+        console.warn('Errores durante la carga Excel:', data.errores || data);
+        const errores = data.errores
+          ? '\n- ' + data.errores.join('\n- ')
+          : '';
+        mostrarNotificacion(`${data.mensaje || 'Error al cargar Excel.'}${errores}`, 'error');
+      }
+
     } catch (err) {
       console.error('Error al subir Excel de productos:', err);
-      mostrarNotificacion('Error al subir Excel de productos.', 'error');
+      mostrarNotificacion('Error al subir Excel de productos: ' + err.message, 'error');
     } finally {
-      // Limpiar el nombre del archivo después de un tiempo
       if (confirmBtn) {
-        confirmBtn.style.display = 'none'; // Ocultar botón
-        confirmBtn.disabled = false; // Rehabilitar
+        confirmBtn.style.display = 'none';
+        confirmBtn.disabled = false;
       }
       const fileNameDisplay = document.getElementById('excel-productos-filename');
       if (fileNameDisplay) fileNameDisplay.textContent = '';
-      document.getElementById('excelProductos').value = ''; // Limpiar el input
+      document.getElementById('excelProductos').value = '';
     }
-  }
+  };
 
   // --- Añadir proveedores desde excel ---
   window.subirExcelProveedores = async function (file) {
@@ -863,6 +1308,37 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   }
+
+  // --- Añadir categorías desde Excel ---
+  window.subirExcelCategorias = async function (file) {
+    const formData = new FormData();
+    const confirmBtn = document.getElementById('btn-confirm-excel-upload');
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/admin/categorias/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      });
+      const data = await res.json();
+      mostrarNotificacion(data.mensaje, res.ok ? 'exito' : 'error');
+      loadCategorias(); // Recargar tabla de categorías
+    } catch (err) {
+      console.error('Error al subir Excel de categorías:', err);
+      mostrarNotificacion('Error al subir Excel de categorías.', 'error');
+    } finally {
+      if (confirmBtn) {
+        confirmBtn.style.display = 'none';
+        confirmBtn.disabled = false;
+      }
+      const fileNameDisplay = document.getElementById('excel-categorias-filename');
+      if (fileNameDisplay) fileNameDisplay.textContent = '';
+      document.getElementById('excelCategorias').value = ''; // Limpiar input
+    }
+  };
 
     // --- Delegación de eventos para botones dinámicos ---
     // Esto asegura que los botones funcionen incluso si se recargan con el contenido.
