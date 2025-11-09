@@ -1,13 +1,6 @@
 <div class="panel-header">
   <div class="panel-actions">
-    <input type="search" placeholder="Buscar categoría..." class="panel-search" aria-label="Buscar categorías">
-    <button class="btn-add-new"><i class="fa-solid fa-plus"></i> Añadir Categoría</button>
-    <button class="btn-upload-excel" onclick="document.getElementById('excelCategorias').click()">
-      <i class="fa-solid fa-file-excel"></i> Cargar desde Excel
-    </button>
-    <input type="file" id="excelCategorias" accept=".xlsx, .xls" style="display:none">
-    <span id="excel-categorias-filename" class="file-name-display"></span>
-    <button id="btn-confirm-excel-upload" class="btn-add-new" style="display:none; background-color: #1D6F42;">Subir Archivo</button>
+    <button class="btn-add-new" onclick="mostrarModalCategoria()">+ Añadir Categoría</button>
   </div>
 </div>
 
@@ -16,7 +9,7 @@
     <thead>
       <tr>
         <th>ID</th>
-        <th>Nombre</th>
+        <th>Nombre de Categoría</th>
         <th>Acciones</th>
       </tr>
     </thead>
@@ -24,43 +17,18 @@
   </table>
 </div>
 
-<!-- Modal para editar categoría -->
-<div id="modal-editar-categoria" class="modal" style="display:none;">
-  <div class="modal-overlay"></div>
+<!-- Modal para agregar categoria-->
+<div id="modal-categoria" class="modal" style="display:none;">
   <div class="modal-content">
-    <div class="modal-header">
-      <h2>Editar Categoría</h2>
-      <button class="modal-close-btn">&times;</button>
-    </div>
-    <div class="modal-body">
-      <form id="form-editar-categoria">
-        <input type="hidden" id="edit-categoria-id">
-        <div class="form-group">
-          <label for="edit-categoria-nombre">Nombre</label>
-          <input type="text" id="edit-categoria-nombre" required>
-        </div>
-        <button type="submit" class="btn-submit">Guardar Cambios</button>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Modal para agregar categoría -->
-<div id="modal-agregar-categoria" class="modal" style="display:none;">
-  <div class="modal-overlay"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Agregar Nueva Categoría</h2>
-      <button class="modal-close-btn">&times;</button>
-    </div>
-    <div class="modal-body">
-      <form id="form-agregar-categoria">
-        <div class="form-group">
-          <label for="nueva-categoria-nombre">Nombre</label>
-          <input type="text" id="nueva-categoria-nombre" required>
-        </div>
-        <button type="submit" class="btn-submit">Guardar Categoría</button>
-      </form>
-    </div>
+    <h3 id="modalCategoriaTitulo">Nueva Categoría</h3>
+    <form id="form-categoria">
+      <input type="hidden" id="categoria-id">
+      <label>Nombre de categoría:</label>
+      <input type="text" id="categoria-nombre" required>
+      <div class="modal-actions">
+        <button type="submit" class="btn-guardar">Guardar</button>
+        <button type="button" class="btn-cancelar" onclick="cerrarModalCategoria()">Cancelar</button>
+      </div>
+    </form>
   </div>
 </div>
