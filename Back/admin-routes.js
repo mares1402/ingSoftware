@@ -457,9 +457,27 @@ router.put('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
 // Eliminar proveedor
 router.delete('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
   const { id } = req.params;
-  conexion.query('DELETE FROM Proveedores WHERE id_proveedor=?', [id], (err) => {
-    if (err) return res.status(500).json({ mensaje: 'Error al eliminar proveedor', error: err });
-    res.json({ mensaje: 'Proveedor eliminado con éxito' });
+
+  // 1. Verificar si el proveedor está en uso en la tabla ProductoProveedor
+  const checkUsageSql = 'SELECT COUNT(*) AS count FROM ProductoProveedor WHERE id_proveedor = ?';
+  conexion.query(checkUsageSql, [id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al verificar el uso del proveedor.', error: err });
+    }
+
+    const count = results[0].count;
+    if (count > 0) {
+      // Si está en uso, no permitir la eliminación y enviar un mensaje claro.
+      return res.status(409).json({ // 409 Conflict es un buen código de estado para esto
+        mensaje: `No se puede eliminar. El proveedor está asignado a ${count} producto(s).`
+      });
+    }
+
+    // 2. Si no está en uso, proceder a eliminar
+    conexion.query('DELETE FROM Proveedores WHERE id_proveedor = ?', [id], (err) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al eliminar el proveedor.', error: err });
+      res.json({ mensaje: 'Proveedor eliminado con éxito.' });
+    });
   });
 });
 
@@ -546,9 +564,27 @@ router.put('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
 // Eliminar categoría
 router.delete('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
   const { id } = req.params;
-  conexion.query('DELETE FROM CategoriaProductos WHERE id_categoria = ?', [id], (err) => {
-    if (err) return res.status(500).json({ mensaje: 'Error al eliminar la categoría. Asegúrate de que no esté en uso por algún producto.', error: err });
-    res.json({ mensaje: 'Categoría eliminada con éxito' });
+
+  // 1. Verificar si la categoría está en uso en la tabla Productos
+  const checkUsageSql = 'SELECT COUNT(*) AS count FROM Productos WHERE id_categoria = ?';
+  conexion.query(checkUsageSql, [id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ mensaje: 'Error al verificar el uso de la categoría.', error: err });
+    }
+
+    const count = results[0].count;
+    if (count > 0) {
+      // Si está en uso, no permitir la eliminación
+      return res.status(409).json({
+        mensaje: `No se puede eliminar. La categoría está en uso por ${count} producto(s).`
+      });
+    }
+
+    // 2. Si no está en uso, proceder a eliminar
+    conexion.query('DELETE FROM CategoriaProductos WHERE id_categoria = ?', [id], (err) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al eliminar la categoría.', error: err });
+      res.json({ mensaje: 'Categoría eliminada con éxito.' });
+    });
   });
 });
 
