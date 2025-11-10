@@ -118,6 +118,20 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
         }
 
         try {
+          // 0. Validar que la categoría y el proveedor existan y estén activos
+          const [catCheck] = await conn.query('SELECT estado FROM CategoriaProductos WHERE id_categoria = ?', [idCategoria]);
+          if (catCheck.length === 0 || catCheck[0].estado !== 1) {
+            errores.push(`Fila ${fila} (${nombre}): La categoría con ID ${idCategoria} no existe o está inactiva.`);
+            continue; // Saltar a la siguiente fila
+          }
+
+          const [provCheck] = await conn.query('SELECT estado FROM Proveedores WHERE id_proveedor = ?', [idProveedor]);
+          if (provCheck.length === 0 || provCheck[0].estado !== 1) {
+            errores.push(`Fila ${fila} (${nombre}): El proveedor con ID ${idProveedor} no existe o está inactivo.`);
+            continue; // Saltar a la siguiente fila
+          }
+
+
           // 1. Verificar si el producto ya existe con el mismo nombre, categoría y proveedor
           const checkDuplicateSql = `
             SELECT p.id_producto
@@ -568,22 +582,26 @@ router.put('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
 router.delete('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
   const { id } = req.params;
 
-  // 1. Verificar si el proveedor está en uso en la tabla ProductoProveedor
-  const checkUsageSql = 'SELECT COUNT(*) AS count FROM ProductoProveedor WHERE id_proveedor = ?';
+  // 1. Verificar si el proveedor está en uso por productos ACTIVOS
+  const checkUsageSql = `
+    SELECT COUNT(*) AS count 
+    FROM ProductoProveedor pp
+    JOIN Productos p ON pp.id_producto = p.id_producto
+    WHERE pp.id_proveedor = ? AND p.estado = 1
+  `;
   conexion.query(checkUsageSql, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ mensaje: 'Error al verificar el uso del proveedor.', error: err });
     }
 
     const count = results[0].count;
-    if (count > 0) {
-      // Si está en uso, no permitir la eliminación y enviar un mensaje claro.
+    if (count > 0) { // Si está en uso por productos activos, no permitir la eliminación
       return res.status(409).json({ // 409 Conflict es un buen código de estado para esto
-        mensaje: `No se puede eliminar. El proveedor está asignado a ${count} producto(s).`
+        mensaje: `No se puede eliminar. El proveedor está asignado a ${count} producto(s) activo(s).`
       });
     }
 
-    // 2. Si no está en uso, proceder a marcar como inactivo
+    // 2. Si no está en uso por productos activos, proceder a marcar como inactivo
     const updateSql = 'UPDATE Proveedores SET estado = 2 WHERE id_proveedor = ?';
     conexion.query(updateSql, [id], (err, result) => {
       if (err) return res.status(500).json({ mensaje: 'Error al eliminar el proveedor.', error: err });
@@ -743,22 +761,21 @@ router.put('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
 router.delete('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
   const { id } = req.params;
 
-  // 1. Verificar si la categoría está en uso en la tabla Productos
-  const checkUsageSql = 'SELECT COUNT(*) AS count FROM Productos WHERE id_categoria = ?';
+  // 1. Verificar si la categoría está en uso por productos ACTIVOS
+  const checkUsageSql = 'SELECT COUNT(*) AS count FROM Productos WHERE id_categoria = ? AND estado = 1';
   conexion.query(checkUsageSql, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ mensaje: 'Error al verificar el uso de la categoría.', error: err });
     }
 
     const count = results[0].count;
-    if (count > 0) {
-      // Si está en uso, no permitir la eliminación
+    if (count > 0) { // Si está en uso por productos activos, no permitir la eliminación
       return res.status(409).json({
-        mensaje: `No se puede eliminar. La categoría está en uso por ${count} producto(s).`
+        mensaje: `No se puede eliminar. La categoría está en uso por ${count} producto(s) activo(s).`
       });
     }
 
-    // 2. Si no está en uso, proceder a marcar como inactiva
+    // 2. Si no está en uso por productos activos, proceder a marcar como inactiva
     const updateSql = 'UPDATE CategoriaProductos SET estado = 2 WHERE id_categoria = ?';
     conexion.query(updateSql, [id], (err, result) => {
       if (err) return res.status(500).json({ mensaje: 'Error al eliminar la categoría.', error: err });

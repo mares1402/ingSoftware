@@ -323,7 +323,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       const select = document.getElementById(selectId);
       select.innerHTML = '<option value="">Seleccionar...</option>';
-      cachedCategories.forEach(c => {
+      // Filtrar para mostrar solo categorías activas (estado = 1)
+      cachedCategories.filter(c => c.estado === 1).forEach(c => {
         const opt = document.createElement('option');
         opt.value = c.id_categoria;
         opt.textContent = c.nombre_categoria;
@@ -341,7 +342,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         const select = document.getElementById(selectId);
         select.innerHTML = '<option value="">Seleccione un proveedor</option>';
-        cachedSuppliers.forEach(proveedor => {
+        // Filtrar para mostrar solo proveedores activos (estado = 1)
+        cachedSuppliers.filter(p => p.estado === 1).forEach(proveedor => {
           const option = document.createElement('option');
           option.value = proveedor.id_proveedor;
           option.textContent = proveedor.nombre_proveedor;
