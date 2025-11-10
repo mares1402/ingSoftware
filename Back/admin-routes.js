@@ -493,10 +493,10 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
         continue; // Saltar a la siguiente fila
       }
 
-      // 2. Validar formato del correo (que contenga '@')
-      // Una validación simple para asegurar que al menos tiene un @
-      if (correo && !correo.includes('@')) {
-        errores.push(`Fila ${fila} (${nombre}): El correo "${correo}" no parece válido (falta @).`);
+      // 2. Validar formato del correo (usando una expresión regular)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (correo && !emailRegex.test(correo)) {
+        errores.push(`Fila ${fila} (${nombre}): El correo "${correo}" no tiene un formato válido.`);
         continue; // Saltar a la siguiente fila
       }
       // --- FIN DE VALIDACIONES ---
