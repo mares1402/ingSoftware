@@ -146,15 +146,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       sessionStorage.setItem('lastAdminSection', section);
 
       if (section === 'info.html') {
-        // --- REINICIO DE ESTADO ---
-        // Al cambiar a una sección que no es de carga de archivos,
-        // limpiamos los inputs de excel para evitar estados residuales.
+      
         const excelInputs = ['excelProductos', 'excelProveedores', 'excelCategorias'];
         excelInputs.forEach(id => {
           const input = document.getElementById(id);
           if (input) input.value = '';
         });
-        // --- FIN DE REINICIO ---
+       
 
         // Caso especial: Generar la tarjeta de información del usuario dinámicamente
         let generoDisplay;
@@ -405,6 +403,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
           }
         };
+
+        // Configurar búsqueda para la tabla de usuarios
+        const searchInput = document.querySelector('.panel-search');
+        if (searchInput && tbody) {
+          searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+              const name = row.cells[1].textContent.toLowerCase();
+              const email = row.cells[4].textContent.toLowerCase();
+              const id = row.cells[0].textContent.toLowerCase();
+              const isVisible = name.includes(searchTerm) || email.includes(searchTerm) || id.includes(searchTerm);
+              row.style.display = isVisible ? '' : 'none';
+            });
+          });
+        }
       } catch (err) {
         console.error(err);
         mostrarNotificacion('Error cargando usuarios: ' + err.message, 'error');
@@ -461,6 +475,22 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
         }
       };
+
+      // Configurar búsqueda para la tabla de productos
+      const searchInput = document.querySelector('.panel-search');
+      if (searchInput && tablaBody) {
+        searchInput.addEventListener('input', () => {
+          const searchTerm = searchInput.value.toLowerCase();
+          const rows = tablaBody.querySelectorAll('tr');
+          rows.forEach(row => {
+            const id = row.cells[0].textContent.toLowerCase();
+            const name = row.cells[1].textContent.toLowerCase();
+            // El placeholder dice SKU, pero no hay columna SKU. Buscamos por ID y Nombre.
+            const isVisible = name.includes(searchTerm) || id.includes(searchTerm);
+            row.style.display = isVisible ? '' : 'none';
+          });
+        });
+      }
       } catch (err) {
         console.error('Error al cargar productos:', err);
         mostrarNotificacion('Error al cargar productos: ' + err.message, 'error');
@@ -512,6 +542,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
           }
         };
+
+        // Configurar búsqueda para la tabla de proveedores
+        const searchInput = document.querySelector('.panel-search');
+        if (searchInput && tbody) {
+          searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+              const id = row.cells[0].textContent.toLowerCase();
+              const name = row.cells[1].textContent.toLowerCase();
+              const isVisible = name.includes(searchTerm) || id.includes(searchTerm);
+              row.style.display = isVisible ? '' : 'none';
+            });
+          });
+        }
+
       } catch (err) {
         console.error('Error al cargar proveedores:', err);
         mostrarNotificacion('Error cargando proveedores: ' + err.message, 'error');
@@ -564,6 +610,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Configurar botón de añadir
         const addBtn = document.querySelector('.btn-add-new');
         if (addBtn) addBtn.onclick = () => openAddCategoryModal();
+
+        // Configurar búsqueda para la tabla de categorías
+        const searchInput = document.querySelector('.panel-search');
+        if (searchInput && tbody) {
+          searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+              const id = row.cells[0].textContent.toLowerCase();
+              const name = row.cells[1].textContent.toLowerCase();
+              const email = row.cells[3].textContent.toLowerCase();
+              const isVisible = name.includes(searchTerm) || id.includes(searchTerm) || email.includes(searchTerm);
+              row.style.display = isVisible ? '' : 'none';
+            });
+          });
+        }
 
       } catch (err) {
         mostrarNotificacion('Error cargando categorías: ' + err.message, 'error');

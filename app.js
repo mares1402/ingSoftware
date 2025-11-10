@@ -4,7 +4,7 @@ const session = require('express-session');
 const app = express();
 const conexion = require('./Back/conexion');
 const authRoutes = require('./Back/aut-controller');
-const fs = require('fs'); // <-- Añadimos el módulo de archivos
+const fs = require('fs'); 
 const adminRoutes = require('./Back/admin-routes');
 const multer = require('multer'); // Añadimos multer
 app.use(express.json());
@@ -13,7 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 // Sesiones (MemoryStore)
 app.use(session({
   name: 'sid',
-  secret: 'contrasenia', // Cambiar a una mas fuerte despues
+  secret: 'contrasenia', 
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -70,9 +70,6 @@ function isAdmin(req, res, next) {
   return res.status(403).send('Acceso denegado');
 }
 
-// --- RUTAS DE LA APLICACIÓN ---
-
-// --- API Pública (para la página principal) ---
 
 // --- API Pública ---
 // Endpoint para obtener todos los productos (público)
@@ -118,7 +115,6 @@ app.get('/api/productos', (req, res) => { // Modificado para aceptar filtros
   });
 });
 
-// --- Nuevas rutas para filtros ---
 // Endpoint para obtener todas las categorías (público)
 app.get('/api/categorias', (req, res) => {
   const sql = 'SELECT id_categoria, nombre_categoria FROM CategoriaProductos ORDER BY nombre_categoria';
@@ -128,7 +124,7 @@ app.get('/api/categorias', (req, res) => {
   });
 });
 
-// Endpoint para obtener todas las marcas (proveedores) (público)
+// Endpoint para obtener todas las marcas 
 app.get('/api/marcas', (req, res) => {
   // Se asume que las "marcas" son los "proveedores"
   const sql = 'SELECT id_proveedor, nombre_proveedor FROM Proveedores ORDER BY nombre_proveedor';
@@ -148,7 +144,7 @@ app.get('/dashboard', isAuthenticated, (req, res, next) => {
   res.sendFile(dashboardPath);
 });
 
-// Nueva ruta para servir los paneles de admin
+
 app.get('/api/admin/panel/:panelName', isAuthenticated, (req, res) => {
   const panelName = req.params.panelName;
   // Solo los admins pueden acceder a los paneles de admin
@@ -164,7 +160,7 @@ app.get('/api/admin/panel/:panelName', isAuthenticated, (req, res) => {
   }
 });
 
-// Endpoint para que el frontend consulte el usuario actual
+
 app.get('/me', isAuthenticated, (req, res) => {
   res.json({ user: req.session.user });
 });
@@ -184,8 +180,7 @@ app.post('/logout', (req, res) => {
 // Rutas públicas de autenticación (login / signup)
 app.use('/', authRoutes);
 
-// Rutas de la API de Admin (para datos)
-// Pasamos el middleware de upload a adminRoutes
+
 app.use('/api/admin', isAuthenticated, isAdmin, adminRoutes(uploadProductImage));
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Servir archivos subidos estáticamente
