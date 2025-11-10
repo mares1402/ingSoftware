@@ -132,26 +132,37 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
           }
 
 
-          // 1. Verificar si el producto ya existe con el mismo nombre, categoría y proveedor
-          const checkDuplicateSql = `
-            SELECT p.id_producto
-            FROM Productos p
-            JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
-            WHERE LOWER(p.nombre_producto) = LOWER(?)
-              AND p.id_categoria = ?
-              AND pp.id_proveedor = ?
-          `;
+          // 1. Verificar si el producto ya existe por su nombre (identificador único)
+          const checkDuplicateSql = 'SELECT id_producto, estado FROM Productos WHERE LOWER(nombre_producto) = LOWER(?)';
           const [existing] = await conn.query(
             checkDuplicateSql,
-            [nombre, idCategoria, idProveedor]
+            [nombre]
           );
 
           if (existing.length > 0) {
-            errores.push(`Fila ${fila} (${nombre}): Ya existe un producto con el mismo nombre, categoría y proveedor.`);
+            const existingProduct = existing[0];
+            if (existingProduct.estado === 1) {
+              errores.push(`Fila ${fila} (${nombre}): Ya existe un producto activo con este nombre.`);
+            } else {
+              // Reactivar y actualizar el producto inactivo con los nuevos datos del Excel.
+              await conn.beginTransaction();
+              await conn.query(
+                'UPDATE Productos SET id_categoria = ?, estado = 1 WHERE id_producto = ?', 
+                [idCategoria, existingProduct.id_producto]
+              );
+              // Actualizar o insertar la relación con el proveedor
+              await conn.query(
+                'INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?) ON DUPLICATE KEY UPDATE id_proveedor = VALUES(id_proveedor)',
+                [existingProduct.id_producto, idProveedor]
+              );
+              await conn.commit();
+              exitos.push(`${nombre} (reactivado)`);
+            }
           } else {
             // 2. Si no existe, insertarlo en una transacción
             await conn.beginTransaction();
             
+            // La imagen es null en carga masiva
             const [productoResult] = await conn.query(
               'INSERT INTO Productos (nombre_producto, id_categoria, ruta_imagen) VALUES (?, ?, ?)',
               [nombre, idCategoria, null] // ruta_imagen se establece en null para cargas masivas
@@ -253,26 +264,39 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
       return res.status(400).json({ mensaje: 'Nombre, categoría y proveedor son obligatorios.' });
     }
 
-    // 1. Verificar si ya existe un producto con el mismo nombre, categoría y proveedor
-    const checkDuplicateSql = `
-      SELECT p.id_producto
-      FROM Productos p
-      JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
-      WHERE LOWER(p.nombre_producto) = LOWER(?)
-        AND p.id_categoria = ?
-        AND pp.id_proveedor = ?
-    `;
-    conexion.query(checkDuplicateSql, [nombre_producto, id_categoria, id_proveedor], (err, results) => {
+    // 1. Verificar si ya existe un producto con el mismo nombre (independientemente de categoría/proveedor)
+    const checkDuplicateSql = 'SELECT id_producto, estado FROM Productos WHERE LOWER(nombre_producto) = LOWER(?)';
+    // Modificamos la consulta para que también devuelva el estado
+    conexion.query(checkDuplicateSql, [nombre_producto], (err, results) => {
       if (err) {
         return res.status(500).json({ mensaje: 'Error al verificar el producto.', error: err });
       }
+
       if (results.length > 0) {
-        return res.status(409).json({ mensaje: 'Ya existe un producto con el mismo nombre, categoría y proveedor.' });
+        const existingProduct = results[0];
+        // NOTA: La regla de negocio es que un producto con el mismo nombre es el mismo producto.
+        // Si se intenta crear con el mismo nombre, se reactiva y se actualizan sus datos.
+        // Si ya está activo, se rechaza para evitar confusiones.
+        if (existingProduct.estado === 1) {
+          return res.status(409).json({ mensaje: 'Ya existe un producto activo con el mismo nombre, categoría y proveedor.' });
+        } else {
+          // Reactivar y actualizar el producto inactivo
+          const rutaImagen = req.file ? `/uploads/products/${req.file.filename}` : null;
+          const updateSql = 'UPDATE Productos SET nombre_producto = ?, id_categoria = ?, ruta_imagen = ?, estado = 1 WHERE id_producto = ?';
+          conexion.query(updateSql, [nombre_producto, id_categoria, rutaImagen, existingProduct.id_producto], (err) => {
+            if (err) return res.status(500).json({ mensaje: 'Error al reactivar el producto.', error: err });
+            // No es necesario actualizar ProductoProveedor si la combinación es la misma
+            return res.status(200).json({ mensaje: 'Producto reactivado y actualizado correctamente.', id: existingProduct.id_producto });
+          });
+          return;
+        }
       }
 
       // 2. Si no es un duplicado, proceder con la inserción en una transacción
       conexion.getConnection((err, conn) => {
         if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
+
+        const rutaImagen = req.file ? `/uploads/products/${req.file.filename}` : null;
 
         conn.beginTransaction(err => {
           if (err) {
@@ -280,7 +304,6 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
             return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
           }
 
-          const rutaImagen = req.file ? `/uploads/products/${req.file.filename}` : null;
           conn.query('INSERT INTO Productos (nombre_producto, id_categoria, ruta_imagen) VALUES (?, ?, ?)', [nombre_producto, id_categoria, rutaImagen], (err, result) => {
               if (err) {
                 return conn.rollback(() => {
@@ -463,13 +486,23 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
 
       try {
         // 1. Verificar si el proveedor ya existe (insensible a mayúsculas/minúsculas)
+        // Modificamos la consulta para que también devuelva el estado
         const [existing] = await conexion.promise().query(
-          'SELECT id_proveedor FROM Proveedores WHERE LOWER(nombre_proveedor) = LOWER(?)',
+          'SELECT id_proveedor, estado FROM Proveedores WHERE LOWER(nombre_proveedor) = LOWER(?)',
           [nombre]
         );
 
         if (existing.length > 0) {
-          errores.push(`Fila ${fila} (${nombre}): Ya existe un proveedor con este nombre.`);
+          if (existing[0].estado === 1) {
+            errores.push(`Fila ${fila} (${nombre}): Ya existe un proveedor activo con este nombre.`);
+          } else {
+            // Reactivar y actualizar el proveedor inactivo
+            await conexion.promise().query(
+              'UPDATE Proveedores SET telefono = ?, correo = ?, direccion = ?, estado = 1 WHERE id_proveedor = ?',
+              [row.Telefono, row.Correo, row.Direccion, existing[0].id_proveedor]
+            );
+            exitos.push(`${nombre} (reactivado)`);
+          }
         } else {
           // 2. Si no existe, insertarlo
           await conexion.promise().query(
@@ -528,13 +561,25 @@ router.post('/proveedores', isAuthenticated, isAdmin, (req, res) => {
   }
 
   // Verificar si ya existe un proveedor con ese nombre (insensible a mayúsculas/minúsculas)
-  conexion.query('SELECT id_proveedor FROM Proveedores WHERE LOWER(nombre_proveedor) = LOWER(?)', [nombre_proveedor], (err, results) => {
+  // Modificamos la consulta para que también devuelva el estado
+  conexion.query('SELECT id_proveedor, estado FROM Proveedores WHERE LOWER(nombre_proveedor) = LOWER(?)', [nombre_proveedor], (err, results) => {
     if (err) {
       return res.status(500).json({ mensaje: 'Error al verificar el proveedor.', error: err });
     }
 
     if (results.length > 0) {
-      return res.status(409).json({ mensaje: 'Ya existe un proveedor con ese nombre.' });
+      const existingSupplier = results[0];
+      if (existingSupplier.estado === 1) {
+        return res.status(409).json({ mensaje: 'Ya existe un proveedor activo con ese nombre.' });
+      } else {
+        // Reactivar y actualizar el proveedor inactivo
+        const updateSql = 'UPDATE Proveedores SET telefono = ?, correo = ?, direccion = ?, estado = 1 WHERE id_proveedor = ?';
+        conexion.query(updateSql, [telefono, correo, direccion, existingSupplier.id_proveedor], (err) => {
+          if (err) return res.status(500).json({ mensaje: 'Error al reactivar el proveedor.', error: err });
+          return res.status(200).json({ mensaje: 'Proveedor reactivado y actualizado correctamente.', id: existingSupplier.id_proveedor });
+        });
+        return;
+      }
     }
 
     // Si no existe, proceder con la inserción
@@ -643,13 +688,20 @@ router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'
 
       try {
         // 1. Verificar si la categoría ya existe (insensible a mayúsculas/minúsculas)
+        // Modificamos la consulta para que también devuelva el estado
         const [existing] = await conexion.promise().query(
-          'SELECT id_categoria FROM CategoriaProductos WHERE LOWER(nombre_categoria) = LOWER(?)',
+          'SELECT id_categoria, estado FROM CategoriaProductos WHERE LOWER(nombre_categoria) = LOWER(?)',
           [nombre]
         );
 
         if (existing.length > 0) {
-          errores.push(`Fila ${fila} (${nombre}): Ya existe una categoría con este nombre.`);
+          if (existing[0].estado === 1) {
+            errores.push(`Fila ${fila} (${nombre}): Ya existe una categoría activa con este nombre.`);
+          } else {
+            // Reactivar la categoría inactiva
+            await conexion.promise().query('UPDATE CategoriaProductos SET estado = 1 WHERE id_categoria = ?', [existing[0].id_categoria]);
+            exitos.push(`${nombre} (reactivada)`);
+          }
         } else {
           // 2. Si no existe, insertarla
           await conexion.promise().query('INSERT INTO CategoriaProductos (nombre_categoria) VALUES (?)', [nombre]);
@@ -704,13 +756,25 @@ router.post('/categorias', isAuthenticated, isAdmin, (req, res) => {
   }
 
   // Verificar si ya existe una categoría con ese nombre (insensible a mayúsculas/minúsculas)
-  conexion.query('SELECT id_categoria FROM CategoriaProductos WHERE LOWER(nombre_categoria) = LOWER(?)', [nombre_categoria], (err, results) => {
+  // Modificamos la consulta para que también devuelva el estado
+  conexion.query('SELECT id_categoria, estado FROM CategoriaProductos WHERE LOWER(nombre_categoria) = LOWER(?)', [nombre_categoria], (err, results) => {
     if (err) {
       return res.status(500).json({ mensaje: 'Error al verificar la categoría.', error: err });
     }
 
     if (results.length > 0) {
-      return res.status(409).json({ mensaje: 'Ya existe una categoría con ese nombre.' });
+      const existingCategory = results[0];
+      if (existingCategory.estado === 1) {
+        return res.status(409).json({ mensaje: 'Ya existe una categoría activa con ese nombre.' });
+      } else {
+        // Reactivar la categoría inactiva (el nombre es el mismo)
+        const updateSql = 'UPDATE CategoriaProductos SET estado = 1 WHERE id_categoria = ?';
+        conexion.query(updateSql, [existingCategory.id_categoria], (err) => {
+          if (err) return res.status(500).json({ mensaje: 'Error al reactivar la categoría.', error: err });
+          return res.status(200).json({ mensaje: 'Categoría reactivada correctamente.', id: existingCategory.id_categoria });
+        });
+        return;
+      }
     }
 
     // Si no existe, proceder con la inserción

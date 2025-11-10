@@ -88,6 +88,7 @@ app.get('/api/productos', (req, res) => { // Modificado para aceptar filtros
     LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria
     LEFT JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
     LEFT JOIN Proveedores pr ON pp.id_proveedor = pr.id_proveedor
+  WHERE p.estado = 1
   `;
 
   const params = [];
@@ -117,7 +118,7 @@ app.get('/api/productos', (req, res) => { // Modificado para aceptar filtros
 
 // Endpoint para obtener todas las categorías (público)
 app.get('/api/categorias', (req, res) => {
-  const sql = 'SELECT id_categoria, nombre_categoria FROM CategoriaProductos ORDER BY nombre_categoria';
+  const sql = 'SELECT id_categoria, nombre_categoria FROM CategoriaProductos WHERE estado = 1 ORDER BY nombre_categoria';
   conexion.query(sql, (err, results) => {
     if (err) return res.status(500).json({ mensaje: 'Error al obtener categorías' });
     res.json(results);
@@ -127,7 +128,7 @@ app.get('/api/categorias', (req, res) => {
 // Endpoint para obtener todas las marcas 
 app.get('/api/marcas', (req, res) => {
   // Se asume que las "marcas" son los "proveedores"
-  const sql = 'SELECT id_proveedor, nombre_proveedor FROM Proveedores ORDER BY nombre_proveedor';
+  const sql = 'SELECT id_proveedor, nombre_proveedor FROM Proveedores WHERE estado = 1 ORDER BY nombre_proveedor';
   conexion.query(sql, (err, results) => {
     if (err) return res.status(500).json({ mensaje: 'Error al obtener marcas' });
     res.json(results);
