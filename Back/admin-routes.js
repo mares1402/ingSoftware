@@ -118,14 +118,22 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
         }
 
         try {
-          // 1. Verificar si el producto ya existe (insensible a mayúsculas/minúsculas)
+          // 1. Verificar si el producto ya existe con el mismo nombre, categoría y proveedor
+          const checkDuplicateSql = `
+            SELECT p.id_producto
+            FROM Productos p
+            JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
+            WHERE LOWER(p.nombre_producto) = LOWER(?)
+              AND p.id_categoria = ?
+              AND pp.id_proveedor = ?
+          `;
           const [existing] = await conn.query(
-            'SELECT id_producto FROM Productos WHERE LOWER(nombre_producto) = LOWER(?)',
-            [nombre]
+            checkDuplicateSql,
+            [nombre, idCategoria, idProveedor]
           );
 
           if (existing.length > 0) {
-            errores.push(`Fila ${fila} (${nombre}): Ya existe un producto con este nombre.`);
+            errores.push(`Fila ${fila} (${nombre}): Ya existe un producto con el mismo nombre, categoría y proveedor.`);
           } else {
             // 2. Si no existe, insertarlo en una transacción
             await conn.beginTransaction();
@@ -230,16 +238,24 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
       return res.status(400).json({ mensaje: 'Nombre, categoría y proveedor son obligatorios.' });
     }
 
-    // 1. Verificar si ya existe un producto con ese nombre
-    conexion.query('SELECT id_producto FROM Productos WHERE LOWER(nombre_producto) = LOWER(?)', [nombre_producto], (err, results) => {
+    // 1. Verificar si ya existe un producto con el mismo nombre, categoría y proveedor
+    const checkDuplicateSql = `
+      SELECT p.id_producto
+      FROM Productos p
+      JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
+      WHERE LOWER(p.nombre_producto) = LOWER(?)
+        AND p.id_categoria = ?
+        AND pp.id_proveedor = ?
+    `;
+    conexion.query(checkDuplicateSql, [nombre_producto, id_categoria, id_proveedor], (err, results) => {
       if (err) {
         return res.status(500).json({ mensaje: 'Error al verificar el producto.', error: err });
       }
       if (results.length > 0) {
-        return res.status(409).json({ mensaje: 'Ya existe un producto con ese nombre.' });
+        return res.status(409).json({ mensaje: 'Ya existe un producto con el mismo nombre, categoría y proveedor.' });
       }
 
-      // 2. Si no existe, proceder con la inserción en una transacción
+      // 2. Si no es un duplicado, proceder con la inserción en una transacción
       conexion.getConnection((err, conn) => {
         if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
 
@@ -300,13 +316,17 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
     try {
       conn = await conexion.promise().getConnection();
 
-      // 0. Verificar si OTRO producto ya tiene ese nombre
+      // 0. Verificar si OTRO producto ya tiene la misma combinación de nombre, categoría y proveedor.
       const [existing] = await conn.query(
-        'SELECT id_producto FROM Productos WHERE LOWER(nombre_producto) = LOWER(?) AND id_producto != ?',
-        [nombre_producto, id]
+        `SELECT p.id_producto 
+         FROM Productos p
+         JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
+         WHERE LOWER(p.nombre_producto) = LOWER(?) AND p.id_categoria = ? AND pp.id_proveedor = ? AND p.id_producto != ?`,
+        [nombre_producto, id_categoria, id_proveedor, id]
       );
+
       if (existing.length > 0) {
-        throw new Error('Ya existe otro producto con ese nombre.');
+        throw new Error('Ya existe otro producto con el mismo nombre, categoría y proveedor.');
       }
 
       await conn.beginTransaction();
@@ -362,7 +382,7 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
 
       console.error('Error al actualizar producto:', error);
       // Si el error es el que creamos nosotros, usamos 409, si no, 500.
-      const statusCode = error.message.includes('Ya existe otro producto') ? 409 : 500;
+      const statusCode = error.message.includes('Ya existe otro producto') ? 409 : 500; // 409 Conflict
       res.status(statusCode).json({ mensaje: error.message || 'Error en el servidor al actualizar el producto' });
 
     } finally {
@@ -427,7 +447,7 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
 
     // Validación de columnas
     if (data.length > 0 && !('Nombre' in data[0] && 'Telefono' in data[0] && 'Correo' in data[0] && 'Direccion' in data[0])) {
-      return res.json({ 
+      return res.json({
         mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de proveedores contenga las columnas: "Nombre", "Telefono", "Correo" y "Direccion".',
         errores: ['El formato de las columnas del archivo es incorrecto.'],
         exitos: 0

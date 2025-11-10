@@ -1131,9 +1131,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarReporteErrores('Reporte de Carga de Productos', data.mensaje, data.errores);
       } else {
         mostrarNotificacion(data.mensaje, 'exito');
+        // Recargar la página para reflejar todos los cambios de forma consistente
+        setTimeout(() => window.location.reload(), 1000);
       }
-
-      if (data.exitos > 0) loadProductos();
     } catch (err) {
       console.error('Error al subir Excel de productos:', err);
     }
@@ -1156,9 +1156,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarReporteErrores('Reporte de Carga de Proveedores', data.mensaje, data.errores);
       } else {
         mostrarNotificacion(data.mensaje, 'exito');
+        setTimeout(() => window.location.reload(), 1000);
       }
-
-      if (data.exitos > 0) loadProveedores();
     } catch (err) {
       console.error('Error al subir Excel de proveedores:', err);
     }
@@ -1181,11 +1180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarReporteErrores('Reporte de Carga de Categorías', data.mensaje, data.errores);
       } else {
         mostrarNotificacion(data.mensaje, 'exito');
-      }
-
-      if (data.exitos > 0) {
-        cachedCategories = null; // Invalidar caché para recargar
-        loadCategorias();
+        setTimeout(() => window.location.reload(), 1000);
       }
     } catch (err) {
       console.error('Error al subir Excel de categorías:', err);
