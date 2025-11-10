@@ -39,7 +39,7 @@
     <div class="modal-body">
       <form id="form-editar-proveedor">
         <input type="hidden" id="edit-proveedor-id">
-        <div class="form-group"><label for="edit-nombre">Nombre</label><input type="text" id="edit-nombre" required maxlength="49"></div>
+        <div class="form-group"><label for="edit-nombre">Nombre</label><input type="text" id="edit-nombre" required maxlength="49" oninput="this.value = this.value.replace(/[^a-zA-Z0-9ñÑáéíóúÁÉÍÓÚüÜ\s]/g, '')"></div>
         <div class="form-group"><label for="edit-telefono">Teléfono</label><input type="tel" id="edit-telefono" required minlength="10" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="\d{10,15}" title="El teléfono debe tener entre 10 y 15 dígitos."></div>
         <div class="form-group"><label for="edit-correo">Correo</label><input type="email" id="edit-correo" maxlength="35"></div>
         <div class="form-group"><label for="edit-direccion">Dirección</label><input type="text" id="edit-direccion" maxlength="99"></div>
@@ -61,7 +61,7 @@
       <form id="form-agregar-proveedor">
         <div class="form-group form-group-spaced">
           <label for="nuevo-proveedor-nombre">Nombre</label>
-          <input type="text" id="nuevo-proveedor-nombre" required maxlength="49">
+          <input type="text" id="nuevo-proveedor-nombre" required maxlength="49" oninput="this.value = this.value.replace(/[^a-zA-Z0-9ñÑáéíóúÁÉÍÓÚüÜ\s]/g, '')">
         </div>
         <div class="form-group form-group-spaced">
           <label for="nuevo-proveedor-telefono">Teléfono</label>

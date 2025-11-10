@@ -7,7 +7,7 @@
     </button>
     <input type="file" id="excelProductos" accept=".xlsx, .xls" style="display:none">
     <span id="excel-productos-filename" class="file-name-display"></span>
-    <button id="btn-confirm-excel-upload" class="btn-confirm-upload" style="display:none;" title="Subir Archivo"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+    <button id="btn-confirm-excel-upload-productos" class="btn-confirm-upload" style="display:none;" title="Subir Archivo"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
   </div>
 </div>
 
@@ -41,7 +41,7 @@
         <div class="form-grid">
           <div class="form-group">
             <label for="edit-producto-nombre">Nombre</label>
-            <input type="text" id="edit-producto-nombre" required maxlength="49">
+            <input type="text" id="edit-producto-nombre" required maxlength="49" oninput="this.value = this.value.replace(/[^a-zA-Z0-9ñÑáéíóúÁÉÍÓÚüÜ\s]/g, '')">
           </div>
           <div class="form-group">
             <label for="edit-producto-categoria">Categoría</label>
@@ -83,7 +83,7 @@
         <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
           <div class="form-group">
             <label for="nuevo-producto-nombre">Nombre</label>
-            <input type="text" id="nuevo-producto-nombre" required maxlength="49">
+            <input type="text" id="nuevo-producto-nombre" required maxlength="49" oninput="this.value = this.value.replace(/[^a-zA-Z0-9ñÑáéíóúÁÉÍÓÚüÜ\s]/g, '')">
           </div>
            <div class="form-group">
             <label for="nuevo-producto-imagen">Imagen del Producto</label>

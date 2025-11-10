@@ -29,6 +29,8 @@ function isAdmin(req, res, next) {
 // La función adminRoutes ahora recibe 'upload' como argumento
 module.exports = (uploadProductImage) => { // Envuelve las rutas en una función que acepta el middleware de subida
   const router = express.Router();
+  // Regex para validar nombres (letras, números y espacios)
+  const nameValidationRegex = /^[a-zA-Z0-9ñÑáéíóúÁÉÍÓÚüÜ\s]+$/;
 
   // --- USUARIOS ---
   // Obtener todos los usuarios
@@ -93,11 +95,17 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(sheet);
 
-      // Validación de columnas
-      if (data.length > 0 && !('Nombre' in data[0] && 'Categoria' in data[0] && 'Proveedor' in data[0])) {
+      // Validación estricta de columnas: deben ser exactamente 'Nombre', 'Categoria', 'Proveedor'.
+      const expectedColumns = ['Nombre', 'Categoria', 'Proveedor'];
+      const actualColumns = data.length > 0 ? Object.keys(data[0]) : [];
+      const isValid = expectedColumns.length === actualColumns.length && expectedColumns.every(col => actualColumns.includes(col));
+
+      if (!isValid) {
         return res.json({ 
-          mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de productos contenga las columnas: "Nombre", "Categoria" y "Proveedor".',
-          errores: ['El formato de las columnas del archivo es incorrecto.'],
+          mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de productos contenga exactamente las columnas: "Nombre", "Categoria" y "Proveedor".',
+          errores: [
+            'El formato de las columnas del archivo es incorrecto o no corresponde a un archivo de productos.'
+          ],
           exitos: 0
         });
       }
@@ -114,6 +122,16 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
 
         if (!nombre || !idCategoria || !idProveedor) {
           errores.push(`Fila ${fila}: Faltan datos esenciales (Nombre, Categoria o Proveedor).`);
+          continue;
+        }
+
+        if (nombre.length > 50) {
+          errores.push(`Fila ${fila} (${nombre}): El nombre es demasiado largo (máximo 50 caracteres).`);
+          continue;
+        }
+
+        if (!nameValidationRegex.test(nombre)) {
+          errores.push(`Fila ${fila} (${nombre}): El nombre contiene caracteres no válidos (solo letras, números y espacios).`);
           continue;
         }
 
@@ -264,6 +282,16 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
       return res.status(400).json({ mensaje: 'Nombre, categoría y proveedor son obligatorios.' });
     }
 
+    // Validación de longitud del nombre
+    if (nombre_producto.length > 50) {
+      return res.status(400).json({ mensaje: 'El nombre del producto no puede exceder los 50 caracteres.' });
+    }
+
+    // Validación de caracteres para el nombre del producto
+    if (!nameValidationRegex.test(nombre_producto)) {
+      return res.status(400).json({ mensaje: 'El nombre del producto contiene caracteres no válidos. Solo se permiten letras, números y espacios.' });
+    }
+
     // 1. Verificar si ya existe un producto con el mismo nombre (independientemente de categoría/proveedor)
     const checkDuplicateSql = 'SELECT id_producto, estado FROM Productos WHERE LOWER(nombre_producto) = LOWER(?)';
     // Modificamos la consulta para que también devuelva el estado
@@ -347,6 +375,16 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
 
     if (!nombre_producto || !id_categoria || !id_proveedor) {
       return res.status(400).json({ mensaje: 'Nombre, categoría y proveedor son obligatorios.' });
+    }
+
+    // Validación de longitud del nombre
+    if (nombre_producto.length > 50) {
+      return res.status(400).json({ mensaje: 'El nombre del producto no puede exceder los 50 caracteres.' });
+    }
+
+    // Validación de caracteres para el nombre del producto
+    if (!nameValidationRegex.test(nombre_producto)) {
+      return res.status(400).json({ mensaje: 'El nombre del producto contiene caracteres no válidos. Solo se permiten letras, números y espacios.' });
     }
 
     let conn;
@@ -463,11 +501,17 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet);
 
-    // Validación de columnas
-    if (data.length > 0 && !('Nombre' in data[0] && 'Telefono' in data[0] && 'Correo' in data[0] && 'Direccion' in data[0])) {
+    // Validación estricta de columnas: deben ser exactamente 'Nombre', 'Telefono', 'Correo', 'Direccion'.
+    const expectedColumns = ['Nombre', 'Telefono', 'Correo', 'Direccion'];
+    const actualColumns = data.length > 0 ? Object.keys(data[0]) : [];
+    const isValid = expectedColumns.length === actualColumns.length && expectedColumns.every(col => actualColumns.includes(col));
+
+    if (!isValid) {
       return res.json({
-        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de proveedores contenga las columnas: "Nombre", "Telefono", "Correo" y "Direccion".',
-        errores: ['El formato de las columnas del archivo es incorrecto.'],
+        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de proveedores contenga exactamente las columnas: "Nombre", "Telefono", "Correo" y "Direccion".',
+        errores: [
+          'El formato de las columnas del archivo es incorrecto o no corresponde a un archivo de proveedores.'
+        ],
         exitos: 0
       });
     }
@@ -483,6 +527,18 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
 
       if (!nombre) {
         errores.push(`Fila ${fila}: Falta el nombre del proveedor.`);
+        continue;
+      }
+
+      // Validación de longitud del nombre
+      if (nombre.length > 50) {
+        errores.push(`Fila ${fila} (${nombre}): El nombre es demasiado largo (máximo 50 caracteres).`);
+        continue;
+      }
+
+      // Validación de caracteres para el nombre del proveedor
+      if (!nameValidationRegex.test(nombre)) {
+        errores.push(`Fila ${fila} (${nombre}): El nombre contiene caracteres no válidos (solo letras, números y espacios).`);
         continue;
       }
 
@@ -577,6 +633,16 @@ router.post('/proveedores', isAuthenticated, isAdmin, (req, res) => {
     return res.status(400).json({ mensaje: 'El nombre y el teléfono del proveedor son obligatorios.' });
   }
 
+  // Validación de longitud del nombre
+  if (nombre_proveedor.length > 50) {
+    return res.status(400).json({ mensaje: 'El nombre del proveedor no puede exceder los 50 caracteres.' });
+  }
+
+  // Validación de caracteres para el nombre del proveedor
+  if (!nameValidationRegex.test(nombre_proveedor)) {
+    return res.status(400).json({ mensaje: 'El nombre del proveedor contiene caracteres no válidos. Solo se permiten letras, números y espacios.' });
+  }
+
   // Verificar si ya existe un proveedor con ese nombre (insensible a mayúsculas/minúsculas)
   // Modificamos la consulta para que también devuelva el estado
   conexion.query('SELECT id_proveedor, estado FROM Proveedores WHERE LOWER(nombre_proveedor) = LOWER(?)', [nombre_proveedor], (err, results) => {
@@ -618,6 +684,16 @@ router.put('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
 
   if (!nombre_proveedor) {
     return res.status(400).json({ mensaje: 'El nombre del proveedor es obligatorio.' });
+  }
+
+  // Validación de longitud del nombre
+  if (nombre_proveedor.length > 50) {
+    return res.status(400).json({ mensaje: 'El nombre del proveedor no puede exceder los 50 caracteres.' });
+  }
+
+  // Validación de caracteres para el nombre del proveedor
+  if (!nameValidationRegex.test(nombre_proveedor)) {
+    return res.status(400).json({ mensaje: 'El nombre del proveedor contiene caracteres no válidos. Solo se permiten letras, números y espacios.' });
   }
 
   // Verificar si OTRO proveedor ya tiene ese nombre
@@ -682,11 +758,17 @@ router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet);
 
-    // Validación de columnas
-    if (data.length > 0 && !('Nombre' in data[0])) {
+    // Validación estricta de columnas: debe ser exactamente 'Nombre'.
+    const expectedColumns = ['Nombre'];
+    const actualColumns = data.length > 0 ? Object.keys(data[0]) : [];
+    const isValid = expectedColumns.length === actualColumns.length && expectedColumns.every(col => actualColumns.includes(col));
+
+    if (!isValid) {
       return res.json({ 
-        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de categorías contenga la columna "Nombre".',
-        errores: ['El formato de las columnas del archivo es incorrecto.'],
+        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de categorías contenga exactamente la columna "Nombre".',
+        errores: [
+          'El formato de las columnas del archivo es incorrecto o no corresponde a un archivo de categorías.'
+        ],
         exitos: 0
       });
     }
@@ -700,6 +782,18 @@ router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'
 
       if (!nombre) {
         errores.push(`Fila ${fila}: Falta el nombre de la categoría.`);
+        continue;
+      }
+
+      // Validación de caracteres para el nombre de la categoría
+      if (!nameValidationRegex.test(nombre)) {
+        errores.push(`Fila ${fila} (${nombre.substring(0, 20)}...): El nombre contiene caracteres no válidos (solo letras, números y espacios).`);
+        continue;
+      }
+
+      // Validación de longitud del nombre
+      if (nombre.length > 50) {
+        errores.push(`Fila ${fila} (${nombre.substring(0, 20)}...): El nombre es demasiado largo (máximo 50 caracteres).`);
         continue;
       }
 
@@ -725,7 +819,11 @@ router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'
           exitos.push(nombre);
         }
       } catch (error) {
-        errores.push(`Fila ${fila} (${nombre}): Error inesperado en la base de datos.`);
+        // Añadir un log para depuración en el servidor
+        console.error(`Error en fila ${fila} para categoría "${nombre}":`, error);
+        // Proveer un mensaje de error más útil
+        const motivo = error.code === 'ER_DATA_TOO_LONG' ? 'El nombre es demasiado largo.' : 'Error inesperado en la BD.';
+        errores.push(`Fila ${fila} (${nombre.substring(0, 20)}...): ${motivo}`);
       }
     }
 
@@ -772,6 +870,16 @@ router.post('/categorias', isAuthenticated, isAdmin, (req, res) => {
     return res.status(400).json({ mensaje: 'El nombre de la categoría es obligatorio.' });
   }
 
+  // Validación de longitud del nombre
+  if (nombre_categoria.length > 50) {
+    return res.status(400).json({ mensaje: 'El nombre de la categoría no puede exceder los 50 caracteres.' });
+  }
+
+  // Validación de caracteres para el nombre de la categoría
+  if (!nameValidationRegex.test(nombre_categoria)) {
+    return res.status(400).json({ mensaje: 'El nombre de la categoría contiene caracteres no válidos. Solo se permiten letras, números y espacios.' });
+  }
+
   // Verificar si ya existe una categoría con ese nombre (insensible a mayúsculas/minúsculas)
   // Modificamos la consulta para que también devuelva el estado
   conexion.query('SELECT id_categoria, estado FROM CategoriaProductos WHERE LOWER(nombre_categoria) = LOWER(?)', [nombre_categoria], (err, results) => {
@@ -813,6 +921,16 @@ router.put('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
 
   if (!nombre_categoria) {
     return res.status(400).json({ mensaje: 'El nombre de la categoría es obligatorio.' });
+  }
+
+  // Validación de longitud del nombre
+  if (nombre_categoria.length > 50) {
+    return res.status(400).json({ mensaje: 'El nombre de la categoría no puede exceder los 50 caracteres.' });
+  }
+
+  // Validación de caracteres para el nombre de la categoría
+  if (!nameValidationRegex.test(nombre_categoria)) {
+    return res.status(400).json({ mensaje: 'El nombre de la categoría contiene caracteres no válidos. Solo se permiten letras, números y espacios.' });
   }
 
   // Verificar si OTRA categoría ya tiene ese nombre

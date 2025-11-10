@@ -991,7 +991,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Determinar qué botón de confirmación usar
     let confirmBtnId;
     if (inputId === 'excelProductos') {
-      confirmBtnId = 'btn-confirm-excel-upload'; // Este es el de productos
+      confirmBtnId = 'btn-confirm-excel-upload-productos'; // Este es el de productos
     } else if (inputId === 'excelProveedores') {
       confirmBtnId = 'btn-confirm-excel-upload-proveedores'; // Este es el de proveedores
     } else if (inputId === 'excelCategorias') {

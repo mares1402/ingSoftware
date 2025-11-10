@@ -39,7 +39,7 @@
         <input type="hidden" id="edit-categoria-id">
         <div class="form-group">
           <label for="edit-categoria-nombre">Nombre de la Categoría</label>
-          <input type="text" id="edit-categoria-nombre" required maxlength="49">
+          <input type="text" id="edit-categoria-nombre" required maxlength="49" oninput="this.value = this.value.replace(/[^a-zA-Z0-9ñÑáéíóúÁÉÍÓÚüÜ\s]/g, '')">
         </div>
         <button type="submit" class="btn-submit">Guardar Cambios</button>
       </form>
@@ -57,7 +57,7 @@
     </div>
     <div class="modal-body">
       <form id="form-agregar-categoria">
-        <div class="form-group"><label for="nuevo-categoria-nombre">Nombre de la Categoría</label><input type="text" id="nuevo-categoria-nombre" required maxlength="49"></div>
+        <div class="form-group"><label for="nuevo-categoria-nombre">Nombre de la Categoría</label><input type="text" id="nuevo-categoria-nombre" required maxlength="49" oninput="this.value = this.value.replace(/[^a-zA-Z0-9ñÑáéíóúÁÉÍÓÚüÜ\s]/g, '')"></div>
         <button type="submit" class="btn-submit">Guardar Categoría</button>
       </form>
     </div>
