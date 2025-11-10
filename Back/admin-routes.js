@@ -556,8 +556,8 @@ router.get('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
 // Crear proveedor
 router.post('/proveedores', isAuthenticated, isAdmin, (req, res) => {
   const { nombre_proveedor, telefono, correo, direccion } = req.body;
-  if (!nombre_proveedor) {
-    return res.status(400).json({ mensaje: 'El nombre del proveedor es obligatorio.' });
+  if (!nombre_proveedor || !telefono) {
+    return res.status(400).json({ mensaje: 'El nombre y el teléfono del proveedor son obligatorios.' });
   }
 
   // Verificar si ya existe un proveedor con ese nombre (insensible a mayúsculas/minúsculas)
