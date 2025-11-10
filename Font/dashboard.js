@@ -620,8 +620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             rows.forEach(row => {
               const id = row.cells[0].textContent.toLowerCase();
               const name = row.cells[1].textContent.toLowerCase();
-              const email = row.cells[3].textContent.toLowerCase();
-              const isVisible = name.includes(searchTerm) || id.includes(searchTerm) || email.includes(searchTerm);
+              const isVisible = name.includes(searchTerm) || id.includes(searchTerm);
               row.style.display = isVisible ? '' : 'none';
             });
           });
