@@ -1,6 +1,7 @@
+
 <div class="panel-header">
   <div class="panel-actions">
-    <input type="search" placeholder="Buscar por nombre o RFC..." class="panel-search" aria-label="Buscar proveedores">
+    <input type="search" placeholder="Buscar por nombre..." class="panel-search" aria-label="Buscar proveedores">
     <button class="btn-add-new"><i class="fa-solid fa-plus"></i> Añadir Proveedor</button>
     <button type="button" class="btn-upload-excel" onclick="document.getElementById('excelProveedores').click()">
       <i class="fa-solid fa-file-excel"></i> Cargar desde Excel
@@ -27,8 +28,8 @@
   </table>
 </div>
 
-<!-- Modal para Editar Proveedor -->
-<div id="modal-editar-proveedor" class="modal" style="display: none;">
+<!-- Modal para editar proveedor -->
+<div id="modal-editar-proveedor" class="modal" style="display:none;">
   <div class="modal-overlay"></div>
   <div class="modal-content">
     <div class="modal-header">
@@ -38,32 +39,18 @@
     <div class="modal-body">
       <form id="form-editar-proveedor">
         <input type="hidden" id="edit-proveedor-id">
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="edit-nombre">Nombre</label>
-            <input type="text" id="edit-nombre" required>
-          </div>
-          <div class="form-group">
-            <label for="edit-telefono">Teléfono</label>
-            <input type="tel" id="edit-telefono">
-          </div>
-          <div class="form-group">
-            <label for="edit-correo">Correo</label>
-            <input type="email" id="edit-correo">
-          </div>
-          <div class="form-group">
-            <label for="edit-direccion">Dirección</label>
-            <input type="text" id="edit-direccion">
-          </div>
-        </div>
+        <div class="form-group"><label for="edit-nombre">Nombre</label><input type="text" id="edit-nombre" required></div>
+        <div class="form-group"><label for="edit-telefono">Teléfono</label><input type="tel" id="edit-telefono"></div>
+        <div class="form-group"><label for="edit-correo">Correo</label><input type="email" id="edit-correo"></div>
+        <div class="form-group"><label for="edit-direccion">Dirección</label><input type="text" id="edit-direccion"></div>
         <button type="submit" class="btn-submit">Guardar Cambios</button>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Modal para Agregar Proveedor -->
-<div id="modal-agregar-proveedor" class="modal" style="display: none;">
+<!-- Modal para agregar proveedor -->
+<div id="modal-agregar-proveedor" class="modal" style="display:none;">
   <div class="modal-overlay"></div>
   <div class="modal-content">
     <div class="modal-header">
@@ -72,10 +59,22 @@
     </div>
     <div class="modal-body">
       <form id="form-agregar-proveedor">
-        <div class="form-group"><label for="nuevo-proveedor-nombre">Nombre</label><input type="text" id="nuevo-proveedor-nombre" required></div>
-        <div class="form-group"><label for="nuevo-proveedor-telefono">Teléfono</label><input type="tel" id="nuevo-proveedor-telefono"></div>
-        <div class="form-group"><label for="nuevo-proveedor-correo">Correo</label><input type="email" id="nuevo-proveedor-correo"></div>
-        <div class="form-group"><label for="nuevo-proveedor-direccion">Dirección</label><input type="text" id="nuevo-proveedor-direccion"></div>
+        <div class="form-group form-group-spaced">
+          <label for="nuevo-proveedor-nombre">Nombre</label>
+          <input type="text" id="nuevo-proveedor-nombre" required>
+        </div>
+        <div class="form-group form-group-spaced">
+          <label for="nuevo-proveedor-telefono">Teléfono</label>
+          <input type="tel" id="nuevo-proveedor-telefono">
+        </div>
+        <div class="form-group form-group-spaced">
+          <label for="nuevo-proveedor-correo">Correo</label>
+          <input type="email" id="nuevo-proveedor-correo">
+        </div>
+        <div class="form-group form-group-spaced">
+          <label for="nuevo-proveedor-direccion">Dirección</label>
+          <input type="text" id="nuevo-proveedor-direccion">
+        </div>
         <button type="submit" class="btn-submit">Guardar Proveedor</button>
       </form>
     </div>

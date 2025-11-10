@@ -497,6 +497,12 @@ hr { border:0; border-top:1px solid #eee; }
   box-sizing: border-box;
 }
 
+/* Título dinámico del panel */
+.admin-panel-title {
+  margin-top: 0;
+  margin-bottom: 2rem;
+}
+
 /* === Estilos para Notificaciones (Toast) === */
 .toast-notification {
   position: fixed;

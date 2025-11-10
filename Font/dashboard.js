@@ -66,6 +66,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     modal.style.display = 'flex';
   }
 
+  /**
+   * Muestra un modal con un reporte detallado de errores.
+   * @param {string} titulo El título del modal.
+   * @param {string} resumen Un mensaje de resumen.
+   * @param {string[]} errores Un array con los mensajes de error.
+   */
+  function mostrarReporteErrores(titulo, resumen, errores) {
+    let modal = document.getElementById('error-report-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'error-report-modal';
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-report">
+          <h3 class="modal-title"></h3>
+          <p class="modal-message"></p>
+          <div class="error-list-container">
+            <ul class="error-list"></ul>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-confirm">Entendido</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    modal.querySelector('.modal-title').textContent = titulo;
+    modal.querySelector('.modal-message').textContent = resumen;
+    modal.querySelector('.error-list').innerHTML = errores.map(e => `<li>${e}</li>`).join('');
+
+    modal.querySelector('.btn-confirm').onclick = () => {
+      window.location.reload();
+    };
+    setupModalCloseListeners(modal);
+    modal.style.display = 'flex';
+  }
+
   // --- OPTIMIZACIÓN: Caché para datos que no cambian a menudo ---
   let cachedCategories = null;
   let cachedSuppliers = null;
@@ -103,7 +142,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.nav-link.active').forEach(link => link.classList.remove('active'));
       if (linkElement) linkElement.classList.add('active');
 
+      // Guardar la sección actual para poder volver a ella después de una recarga
+      sessionStorage.setItem('lastAdminSection', section);
+
       if (section === 'info.html') {
+        // --- REINICIO DE ESTADO ---
+        // Al cambiar a una sección que no es de carga de archivos,
+        // limpiamos los inputs de excel para evitar estados residuales.
+        const excelInputs = ['excelProductos', 'excelProveedores', 'excelCategorias'];
+        excelInputs.forEach(id => {
+          const input = document.getElementById(id);
+          if (input) input.value = '';
+        });
+        // --- FIN DE REINICIO ---
+
         // Caso especial: Generar la tarjeta de información del usuario dinámicamente
         let generoDisplay;
         if (genero === 'Masculino') generoDisplay = `<span class="gender-male">Masculino ♂️</span>`;
@@ -121,12 +173,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
       } else {
         // Cargar paneles de admin desde el servidor
+        // --- REINICIO DE ESTADO ---
+        // Al cargar un panel de administración, reiniciamos los inputs de excel
+        // para asegurar que la funcionalidad de carga esté limpia cada vez.
+        const excelInputs = ['excelProductos', 'excelProveedores', 'excelCategorias'];
+        excelInputs.forEach(id => {
+          const input = document.getElementById(id);
+          if (input) input.value = '';
+        });
+        // --- FIN DE REINICIO ---
+
         contentArea.innerHTML = '<p>Cargando...</p>';
         try {
           const resp = await fetch(`/api/admin/panel/${section}`, { credentials: 'same-origin' });
           if (!resp.ok) throw new Error(`No se pudo cargar el panel ${section}`);
-          const panelHtml = await resp.text();
-          contentArea.innerHTML = `<div class="admin-panel-card">${panelHtml}</div>`;
+
+          // Obtener el nombre de la sección desde el texto del link
+          const sectionName = linkElement ? linkElement.textContent.trim() : 'Panel';
+
+          // Construir el HTML del panel con un título dinámico
+          const panelHtml = `
+            <div class="admin-panel-card">
+              <h2 class="admin-panel-title">${sectionName}</h2>
+              ${await resp.text()}
+            </div>`;
+          contentArea.innerHTML = panelHtml;
 
           // Cargar datos después de inyectar el HTML
           if (section === 'admin-users.html') {
@@ -203,10 +274,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-    // Cargar sección por defecto
-    const defaultSectionLink = navContainer.querySelector('.nav-link');
-    if (defaultSectionLink) {
-      showSection(defaultSectionLink.dataset.section, defaultSectionLink);
+    // Cargar la última sección visitada o la sección por defecto
+    const lastSection = sessionStorage.getItem('lastAdminSection');
+    if (lastSection && esAdmin && navContainer.querySelector(`[data-section="${lastSection}"]`)) {
+      // Si hay una sección guardada y el link existe en la nav, la cargamos
+      const linkToActivate = navContainer.querySelector(`.nav-link[data-section="${lastSection}"]`);
+      showSection(lastSection, linkToActivate);
+    } else {
+      // Si no, cargamos la primera sección disponible
+      const defaultSectionLink = navContainer.querySelector('.nav-link');
+      if (defaultSectionLink) showSection(defaultSectionLink.dataset.section, defaultSectionLink);
     }
 
     // Usar MutationObserver para detectar cuando se añaden modales al DOM.
@@ -876,10 +953,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (inputElement.files && inputElement.files.length > 0) {
         const fileName = inputElement.files[0].name;
         displayElement.textContent = fileName.length > 30 ? `${fileName.substring(0, 27)}...` : fileName;
-        
+
         if (confirmBtn) {
           confirmBtn.style.display = 'inline-flex';
           // Asignar el evento de subida correcto
+          confirmBtn.onclick = null; // Limpiar evento anterior para evitar cierres inesperados
           if (inputId === 'excelProductos') confirmBtn.onclick = () => subirExcelProductos(inputElement.files[0]);
           if (inputId === 'excelProveedores') confirmBtn.onclick = () => subirExcelProveedores(inputElement.files[0]);
           if (inputId === 'excelCategorias') confirmBtn.onclick = () => subirExcelCategorias(inputElement.files[0]);
@@ -887,7 +965,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         displayElement.textContent = ''; // Limpiar el nombre del archivo si se cancela la selección
         if (inputId === 'excelProductos' && confirmBtn) {
-          confirmBtn.onclick = null; // Limpiar evento para evitar referencias a archivos antiguos
           confirmBtn.style.display = 'none';
         }
       }
@@ -977,9 +1054,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // --- Añadir productos desde excel ---
   window.subirExcelProductos = async function (file) {
     const formData = new FormData();
-    const confirmBtn = document.getElementById('btn-confirm-excel-upload');
-    if (confirmBtn) confirmBtn.disabled = true; // Deshabilitar botón para evitar doble click
-
     formData.append('file', file);
 
     try {
@@ -988,30 +1062,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         body: formData,
         credentials: 'same-origin'
       });
+      // Siempre intentar parsear el JSON, incluso en errores HTTP
       const data = await res.json();
-      mostrarNotificacion(data.mensaje, res.ok ? 'exito' : 'error');
-      loadProductos();
+
+      if (data.errores && data.errores.length > 0) {
+        mostrarReporteErrores('Reporte de Carga de Productos', data.mensaje, data.errores);
+      } else {
+        mostrarNotificacion(data.mensaje, 'exito');
+      }
+
+      if (data.exitos > 0) loadProductos();
     } catch (err) {
       console.error('Error al subir Excel de productos:', err);
-      mostrarNotificacion('Error al subir Excel de productos.', 'error');
-    } finally {
-      // Limpiar el nombre del archivo después de un tiempo
-      if (confirmBtn) { // Ocultar el botón después de la subida
-        confirmBtn.style.display = 'none'; // Ocultar botón
-        confirmBtn.disabled = false; // Rehabilitar
-      }
-      const fileNameDisplay = document.getElementById('excel-productos-filename');
-      if (fileNameDisplay) fileNameDisplay.textContent = '';
-      document.getElementById('excelProductos').value = '';
     }
   }
 
   // --- Añadir proveedores desde excel ---
   window.subirExcelProveedores = async function (file) {
     const formData = new FormData();
-    const confirmBtn = document.getElementById('btn-confirm-excel-upload-proveedores');
-    if (confirmBtn) confirmBtn.disabled = true;
-
     formData.append('file', file);
 
     try {
@@ -1020,29 +1088,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         body: formData,
         credentials: 'same-origin'
       });
-      const data = await res.json();
-      mostrarNotificacion(data.mensaje, res.ok ? 'exito' : 'error');
-      loadProveedores();
+      const data = await res.json(); // Intentar parsear siempre
+
+      if (data.errores && data.errores.length > 0) {
+        mostrarReporteErrores('Reporte de Carga de Proveedores', data.mensaje, data.errores);
+      } else {
+        mostrarNotificacion(data.mensaje, 'exito');
+      }
+
+      if (data.exitos > 0) loadProveedores();
     } catch (err) {
       console.error('Error al subir Excel de proveedores:', err);
-      mostrarNotificacion('Error al subir Excel de proveedores.', 'error');
-    } finally {
-      if (confirmBtn) {
-        confirmBtn.style.display = 'none';
-        confirmBtn.disabled = false;
-      }
-      const fileNameDisplay = document.getElementById('excel-proveedores-filename');
-      if (fileNameDisplay) fileNameDisplay.textContent = '';
-      document.getElementById('excelProveedores').value = ''; // Limpiar el input
     }
   }
 
   // --- Añadir categorías desde excel ---
   window.subirExcelCategorias = async function (file) {
     const formData = new FormData();
-    const confirmBtn = document.getElementById('btn-confirm-excel-upload-categorias');
-    if (confirmBtn) confirmBtn.disabled = true;
-
     formData.append('file', file);
 
     try {
@@ -1051,23 +1113,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         body: formData,
         credentials: 'same-origin'
       });
-      const data = await res.json();
-      mostrarNotificacion(data.mensaje, res.ok ? 'exito' : 'error');
-      if (res.ok) {
+      const data = await res.json(); // Intentar parsear siempre
+
+      if (data.errores && data.errores.length > 0) {
+        mostrarReporteErrores('Reporte de Carga de Categorías', data.mensaje, data.errores);
+      } else {
+        mostrarNotificacion(data.mensaje, 'exito');
+      }
+
+      if (data.exitos > 0) {
         cachedCategories = null; // Invalidar caché para recargar
         loadCategorias();
       }
     } catch (err) {
       console.error('Error al subir Excel de categorías:', err);
-      mostrarNotificacion('Error al subir Excel de categorías.', 'error');
-    } finally {
-      if (confirmBtn) {
-        confirmBtn.style.display = 'none';
-        confirmBtn.disabled = false;
-      }
-      const fileNameDisplay = document.getElementById('excel-categorias-filename');
-      if (fileNameDisplay) fileNameDisplay.textContent = '';
-      document.getElementById('excelCategorias').value = '';
     }
   }
 

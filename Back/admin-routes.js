@@ -95,8 +95,10 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
 
       // Validación de columnas
       if (data.length > 0 && !('Nombre' in data[0] && 'Categoria' in data[0] && 'Proveedor' in data[0])) {
-        return res.status(400).json({ 
-          mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de productos contenga las columnas: "Nombre", "Categoria" y "Proveedor".' 
+        return res.json({ 
+          mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de productos contenga las columnas: "Nombre", "Categoria" y "Proveedor".',
+          errores: ['El formato de las columnas del archivo es incorrecto.'],
+          exitos: 0
         });
       }
 
@@ -116,45 +118,55 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
         }
 
         try {
-          await conn.beginTransaction();
-          
-          const [productoResult] = await conn.query(
-            'INSERT INTO Productos (nombre_producto, id_categoria) VALUES (?, ?)',
-            [nombre, idCategoria]
-          );
-          const idProducto = productoResult.insertId;
-
-          await conn.query(
-            'INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)',
-            [idProducto, idProveedor]
+          // 1. Verificar si el producto ya existe (insensible a mayúsculas/minúsculas)
+          const [existing] = await conn.query(
+            'SELECT id_producto FROM Productos WHERE LOWER(nombre_producto) = LOWER(?)',
+            [nombre]
           );
 
-          await conn.commit();
-          exitos.push(nombre);
+          if (existing.length > 0) {
+            errores.push(`Fila ${fila} (${nombre}): Ya existe un producto con este nombre.`);
+          } else {
+            // 2. Si no existe, insertarlo en una transacción
+            await conn.beginTransaction();
+            
+            const [productoResult] = await conn.query(
+              'INSERT INTO Productos (nombre_producto, id_categoria, ruta_imagen) VALUES (?, ?, ?)',
+              [nombre, idCategoria, null] // ruta_imagen se establece en null para cargas masivas
+            );
+            const idProducto = productoResult.insertId;
+
+            await conn.query(
+              'INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)', // Se asocia el proveedor
+              [idProducto, idProveedor]
+            );
+
+            await conn.commit();
+            exitos.push(nombre);
+          }
         } catch (error) {
           await conn.rollback();
-          let motivo = 'Error desconocido.';
-          if (error.code === 'ER_NO_REFERENCED_ROW_2') motivo = 'La categoría o el proveedor no existen.';
-          if (error.code === 'ER_DUP_ENTRY') motivo = 'El producto ya existe.';
+          const motivo = error.code === 'ER_NO_REFERENCED_ROW_2' ? 'La categoría o el proveedor no existen.' : 'Error inesperado en la BD.';
           errores.push(`Fila ${fila} (${nombre}): ${motivo}`);
         }
       }
 
       conn.release();
 
-      let mensaje = `Proceso completado. ${exitos.length} productos agregados.`;
+      let resumen = `Proceso completado. ${exitos.length} productos agregados.`;
       if (errores.length > 0) {
-        mensaje += `\n${errores.length} errores:\n- ${errores.join('\n- ')}`;
+        resumen += ` ${errores.length} con errores.`;
       }
 
-      res.json({ mensaje });
+      // Devolver una estructura JSON con el resumen y la lista de errores
+      res.json({ mensaje: resumen, exitos: exitos.length, errores: errores });
 
     } catch (err) {
       console.error("Error procesando Excel de productos:", err);
       res.status(500).json({ mensaje: 'Error grave al procesar archivo Excel.', error: err.message });
     } finally {
       // Asegurarse de eliminar el archivo temporal
-      if (req.file && req.file.path) {
+      if (req.file && req.file.path && fs.existsSync(req.file.path)) {
         fs.unlink(req.file.path, (err) => {
           if (err) console.error("Error al eliminar archivo temporal:", err);
         });
@@ -212,58 +224,64 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
 
   // Crear producto y asociarlo con proveedor (con subida de imagen)
   router.post('/productos', isAuthenticated, isAdmin, uploadProductImage.single('imagen_producto'), (req, res) => {
-    console.log('\n=== POST /api/admin/productos ===');
-    console.log('Usuario en sesión:', req.session.user);
-    console.log('Cuerpo recibido:', req.body);
-    conexion.getConnection((err, conn) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
+    const { nombre_producto, id_categoria, id_proveedor } = req.body;
 
-      conn.beginTransaction(err => {
-        if (err) {
-          conn.release();
-          return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
-        }
+    if (!nombre_producto || !id_categoria || !id_proveedor) {
+      return res.status(400).json({ mensaje: 'Nombre, categoría y proveedor son obligatorios.' });
+    }
 
-        conn.query(
-          'INSERT INTO Productos (nombre_producto, id_categoria, ruta_imagen) VALUES (?, ?, ?)', // Añadimos ruta_imagen
-          [req.body.nombre_producto, req.body.id_categoria, req.file ? `/uploads/products/${req.file.filename}` : null], // Guardamos la ruta
-          // req.file contiene la información del archivo subido por multer
-          (err, result) => {
-            if (err) {
-              return conn.rollback(() => {
-                conn.release();
-                res.status(500).json({ mensaje: 'Error al crear producto', error: err });
-              });
-            }
+    // 1. Verificar si ya existe un producto con ese nombre
+    conexion.query('SELECT id_producto FROM Productos WHERE LOWER(nombre_producto) = LOWER(?)', [nombre_producto], (err, results) => {
+      if (err) {
+        return res.status(500).json({ mensaje: 'Error al verificar el producto.', error: err });
+      }
+      if (results.length > 0) {
+        return res.status(409).json({ mensaje: 'Ya existe un producto con ese nombre.' });
+      }
 
-            const id_producto = result.insertId;
+      // 2. Si no existe, proceder con la inserción en una transacción
+      conexion.getConnection((err, conn) => {
+        if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
 
-            conn.query(
-              'INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)',
-              [id_producto, req.body.id_proveedor],
-              (err) => {
-                if (err) {
-                  return conn.rollback(() => {
-                    conn.release();
-                    res.status(500).json({ mensaje: 'Error al asociar producto con proveedor', error: err });
-                  });
-                }
+        conn.beginTransaction(err => {
+          if (err) {
+            conn.release();
+            return res.status(500).json({ mensaje: 'Error al iniciar transacción', error: err });
+          }
 
-                conn.commit(err => {
+          const rutaImagen = req.file ? `/uploads/products/${req.file.filename}` : null;
+          conn.query('INSERT INTO Productos (nombre_producto, id_categoria, ruta_imagen) VALUES (?, ?, ?)', [nombre_producto, id_categoria, rutaImagen], (err, result) => {
+              if (err) {
+                return conn.rollback(() => {
+                  conn.release();
+                  res.status(500).json({ mensaje: 'Error al crear producto', error: err });
+                });
+              }
+
+              const id_producto = result.insertId;
+              conn.query('INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)', [id_producto, id_proveedor], (err) => {
                   if (err) {
                     return conn.rollback(() => {
                       conn.release();
-                      res.status(500).json({ mensaje: 'Error al confirmar transacción', error: err });
+                      res.status(500).json({ mensaje: 'Error al asociar producto con proveedor', error: err });
                     });
                   }
 
-                  conn.release();
-                  res.json({ mensaje: 'Producto y proveedor asociados correctamente', id: id_producto });
-                });
-              }
-            );
-          }
-        );
+                  conn.commit(err => {
+                    if (err) {
+                      return conn.rollback(() => {
+                        conn.release();
+                        res.status(500).json({ mensaje: 'Error al confirmar transacción', error: err });
+                      });
+                    }
+                    conn.release();
+                    res.status(201).json({ mensaje: 'Producto creado correctamente', id: id_producto });
+                  });
+                }
+              );
+            }
+          );
+        });
       });
     });
   });
@@ -272,33 +290,43 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
   router.put('/productos/:id', isAuthenticated, isAdmin, uploadProductImage.single('imagen_producto'), async (req, res) => {
     const { id } = req.params;
     const { nombre_producto, id_categoria, id_proveedor, remove_image } = req.body;
+
+    if (!nombre_producto || !id_categoria || !id_proveedor) {
+      return res.status(400).json({ mensaje: 'Nombre, categoría y proveedor son obligatorios.' });
+    }
+
     let conn;
 
     try {
       conn = await conexion.promise().getConnection();
+
+      // 0. Verificar si OTRO producto ya tiene ese nombre
+      const [existing] = await conn.query(
+        'SELECT id_producto FROM Productos WHERE LOWER(nombre_producto) = LOWER(?) AND id_producto != ?',
+        [nombre_producto, id]
+      );
+      if (existing.length > 0) {
+        throw new Error('Ya existe otro producto con ese nombre.');
+      }
+
       await conn.beginTransaction();
 
       // 1. Obtener la ruta de la imagen actual para poder borrarla si es necesario
       const [rows] = await conn.query('SELECT ruta_imagen FROM Productos WHERE id_producto = ?', [id]);
       const oldImagePath = rows.length > 0 ? rows[0].ruta_imagen : null;
 
-      let newImagePath = oldImagePath; // Por defecto, mantenemos la imagen actual
+      let newImagePath = oldImagePath;
 
-      // Caso A: Se sube una nueva imagen
       if (req.file) {
         newImagePath = `/uploads/products/${req.file.filename}`;
-        // Si había una imagen antigua, la borramos del servidor
         if (oldImagePath) {
           const fullOldPath = path.join(__dirname, '..', oldImagePath);
           fs.unlink(fullOldPath, (err) => {
             if (err) console.error(`Error al eliminar imagen antigua ${fullOldPath}:`, err);
           });
         }
-      }
-      // Caso B: Se pide explícitamente quitar la imagen
-      else if (remove_image === 'true') {
+      } else if (remove_image === 'true') {
         newImagePath = null;
-        // Si había una imagen, la borramos del servidor
         if (oldImagePath) {
           const fullOldPath = path.join(__dirname, '..', oldImagePath);
           fs.unlink(fullOldPath, (err) => {
@@ -307,30 +335,24 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
         }
       }
 
-      // 2. Actualizar la tabla de Productos
       await conn.query(
         'UPDATE Productos SET nombre_producto = ?, id_categoria = ?, ruta_imagen = ? WHERE id_producto = ?',
         [nombre_producto, id_categoria, newImagePath, id]
       );
 
-      // 3. Actualizar la tabla de asociación ProductoProveedor
-      // Usamos un INSERT ... ON DUPLICATE KEY UPDATE para manejar tanto creación como actualización
       await conn.query(
         `INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)
          ON DUPLICATE KEY UPDATE id_proveedor = VALUES(id_proveedor)`,
         [id, id_proveedor]
       );
 
-      // 4. Confirmar la transacción
       await conn.commit();
 
       res.json({ mensaje: 'Producto actualizado correctamente' });
 
     } catch (error) {
-      // Si algo falla, revertimos todos los cambios
       if (conn) await conn.rollback();
 
-      // Si falló, pero se subió un archivo, lo borramos para no dejar basura
       if (req.file) {
         const tempPath = path.join(__dirname, '..', `/uploads/products/${req.file.filename}`);
         fs.unlink(tempPath, (err) => {
@@ -339,10 +361,11 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
       }
 
       console.error('Error al actualizar producto:', error);
-      res.status(500).json({ mensaje: 'Error en el servidor al actualizar el producto', error: error.message });
+      // Si el error es el que creamos nosotros, usamos 409, si no, 500.
+      const statusCode = error.message.includes('Ya existe otro producto') ? 409 : 500;
+      res.status(statusCode).json({ mensaje: error.message || 'Error en el servidor al actualizar el producto' });
 
     } finally {
-      // Liberar la conexión en cualquier caso
       if (conn) conn.release();
     }
   });
@@ -404,8 +427,10 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
 
     // Validación de columnas
     if (data.length > 0 && !('Nombre' in data[0] && 'Telefono' in data[0] && 'Correo' in data[0] && 'Direccion' in data[0])) {
-      return res.status(400).json({ 
-        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de proveedores contenga las columnas: "Nombre", "Telefono", "Correo" y "Direccion".' 
+      return res.json({ 
+        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de proveedores contenga las columnas: "Nombre", "Telefono", "Correo" y "Direccion".',
+        errores: ['El formato de las columnas del archivo es incorrecto.'],
+        exitos: 0
       });
     }
 
@@ -422,26 +447,43 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
       }
 
       try {
-        await conexion.promise().query(
-          'INSERT INTO Proveedores (nombre_proveedor, telefono, correo, direccion) VALUES (?, ?, ?, ?)',
-          [nombre, row.Telefono, row.Correo, row.Direccion]
+        // 1. Verificar si el proveedor ya existe (insensible a mayúsculas/minúsculas)
+        const [existing] = await conexion.promise().query(
+          'SELECT id_proveedor FROM Proveedores WHERE LOWER(nombre_proveedor) = LOWER(?)',
+          [nombre]
         );
-        exitos.push(nombre);
+
+        if (existing.length > 0) {
+          errores.push(`Fila ${fila} (${nombre}): Ya existe un proveedor con este nombre.`);
+        } else {
+          // 2. Si no existe, insertarlo
+          await conexion.promise().query(
+            'INSERT INTO Proveedores (nombre_proveedor, telefono, correo, direccion) VALUES (?, ?, ?, ?)',
+            [nombre, row.Telefono, row.Correo, row.Direccion]
+          );
+          exitos.push(nombre);
+        }
       } catch (error) {
-        let motivo = 'Error desconocido.';
-        if (error.code === 'ER_DUP_ENTRY') motivo = 'El nombre o correo ya existe.';
-        errores.push(`Fila ${fila} (${nombre}): ${motivo}`);
+        errores.push(`Fila ${fila} (${nombre}): Error inesperado en la base de datos.`);
       }
     }
 
-    let mensaje = `Proceso completado. ${exitos.length} proveedores agregados.`;
+    let resumen = `Proceso completado. ${exitos.length} proveedores agregados.`;
     if (errores.length > 0) {
-      mensaje += `\n${errores.length} errores:\n- ${errores.join('\n- ')}`;
+      resumen += ` ${errores.length} con errores.`;
     }
-    res.json({ mensaje });
+
+    res.json({ mensaje: resumen, exitos: exitos.length, errores: errores });
 
   } catch (err) {
     res.status(500).json({ mensaje: 'Error grave al procesar archivo Excel.', error: err.message });
+  } finally {
+    // Asegurarse de eliminar el archivo temporal
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Error al eliminar archivo temporal de proveedores:", err);
+      });
+    }
   }
 });
 
@@ -559,8 +601,10 @@ router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'
 
     // Validación de columnas
     if (data.length > 0 && !('Nombre' in data[0])) {
-      return res.status(400).json({ 
-        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de categorías contenga la columna "Nombre".' 
+      return res.json({ 
+        mensaje: 'Archivo no válido. Asegúrese de que el archivo Excel de categorías contenga la columna "Nombre".',
+        errores: ['El formato de las columnas del archivo es incorrecto.'],
+        exitos: 0
       });
     }
 
@@ -577,20 +621,39 @@ router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'
       }
 
       try {
-        await conexion.promise().query('INSERT INTO CategoriaProductos (nombre_categoria) VALUES (?)', [nombre]);
-        exitos.push(nombre);
+        // 1. Verificar si la categoría ya existe (insensible a mayúsculas/minúsculas)
+        const [existing] = await conexion.promise().query(
+          'SELECT id_categoria FROM CategoriaProductos WHERE LOWER(nombre_categoria) = LOWER(?)',
+          [nombre]
+        );
+
+        if (existing.length > 0) {
+          errores.push(`Fila ${fila} (${nombre}): Ya existe una categoría con este nombre.`);
+        } else {
+          // 2. Si no existe, insertarla
+          await conexion.promise().query('INSERT INTO CategoriaProductos (nombre_categoria) VALUES (?)', [nombre]);
+          exitos.push(nombre);
+        }
       } catch (error) {
-        errores.push(`Fila ${fila} (${nombre}): ${error.code === 'ER_DUP_ENTRY' ? 'Ya existe.' : 'Error desconocido.'}`);
+        errores.push(`Fila ${fila} (${nombre}): Error inesperado en la base de datos.`);
       }
     }
 
-    let mensaje = `Proceso completado. ${exitos.length} categorías agregadas.`;
+    let resumen = `Proceso completado. ${exitos.length} categorías agregadas.`;
     if (errores.length > 0) {
-      mensaje += `\n${errores.length} errores:\n- ${errores.join('\n- ')}`;
+      resumen += ` ${errores.length} con errores.`;
     }
-    res.json({ mensaje });
+
+    res.json({ mensaje: resumen, exitos: exitos.length, errores: errores });
   } catch (err) {
     res.status(500).json({ mensaje: 'Error grave al procesar archivo Excel.', error: err.message });
+  } finally {
+    // Asegurarse de eliminar el archivo temporal
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Error al eliminar archivo temporal de categorías:", err);
+      });
+    }
   }
 });
 
