@@ -477,12 +477,29 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
 
     for (const [index, row] of data.entries()) {
       const nombre = row.Nombre;
+      const telefono = row.Telefono ? String(row.Telefono).replace(/\s/g, '') : ''; // Convertir a string y quitar espacios
+      const correo = row.Correo || '';
       const fila = index + 2;
 
       if (!nombre) {
         errores.push(`Fila ${fila}: Falta el nombre del proveedor.`);
         continue;
       }
+
+      // --- VALIDACIONES AÑADIDAS ---
+      // 1. Validar formato del teléfono (numérico, 10-15 dígitos)
+      if (telefono && !/^\d{10,15}$/.test(telefono)) {
+        errores.push(`Fila ${fila} (${nombre}): El teléfono "${row.Telefono}" no es válido. Debe tener entre 10 y 15 dígitos numéricos.`);
+        continue; // Saltar a la siguiente fila
+      }
+
+      // 2. Validar formato del correo (usando una expresión regular)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (correo && !emailRegex.test(correo)) {
+        errores.push(`Fila ${fila} (${nombre}): El correo "${correo}" no tiene un formato válido.`);
+        continue; // Saltar a la siguiente fila
+      }
+      // --- FIN DE VALIDACIONES ---
 
       try {
         // 1. Verificar si el proveedor ya existe (insensible a mayúsculas/minúsculas)
@@ -499,7 +516,7 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
             // Reactivar y actualizar el proveedor inactivo
             await conexion.promise().query(
               'UPDATE Proveedores SET telefono = ?, correo = ?, direccion = ?, estado = 1 WHERE id_proveedor = ?',
-              [row.Telefono, row.Correo, row.Direccion, existing[0].id_proveedor]
+              [telefono, correo, row.Direccion, existing[0].id_proveedor]
             );
             exitos.push(`${nombre} (reactivado)`);
           }
@@ -507,7 +524,7 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
           // 2. Si no existe, insertarlo
           await conexion.promise().query(
             'INSERT INTO Proveedores (nombre_proveedor, telefono, correo, direccion) VALUES (?, ?, ?, ?)',
-            [nombre, row.Telefono, row.Correo, row.Direccion]
+            [nombre, telefono, correo, row.Direccion]
           );
           exitos.push(nombre);
         }

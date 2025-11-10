@@ -104,7 +104,7 @@ app.get('/api/productos', (req, res) => { // Modificado para aceptar filtros
   }
 
   if (conditions.length > 0) {
-    sql += ' WHERE ' + conditions.join(' AND ');
+    sql += ' AND ' + conditions.join(' AND ');
   }
 
   conexion.query(sql, params, (err, results) => {
