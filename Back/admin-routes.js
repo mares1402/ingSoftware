@@ -195,6 +195,7 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
       LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria
       LEFT JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
       LEFT JOIN Proveedores pr ON pp.id_proveedor = pr.id_proveedor
+    WHERE p.estado = 1
     `;
     conexion.query(sql, (err, results) => {
       if (err) {
@@ -396,33 +397,13 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
     let conn;
 
     try {
-      conn = await conexion.promise().getConnection();
-      await conn.beginTransaction();
+      // Cambiar el estado a 2 (inactivo) en lugar de eliminar
+      const [updateResult] = await conexion.promise().query(
+        'UPDATE Productos SET estado = 2 WHERE id_producto = ?',
+        [id]
+      );
 
-      // 1. Obtener la ruta de la imagen para borrarla después
-      const [rows] = await conn.query('SELECT ruta_imagen FROM Productos WHERE id_producto = ?', [id]);
-      const imagePath = rows.length > 0 ? rows[0].ruta_imagen : null;
-
-      // 2. Eliminar la asociación en ProductoProveedor
-      await conn.query('DELETE FROM ProductoProveedor WHERE id_producto = ?', [id]);
-
-      // 3. Eliminar el producto de la tabla Productos
-      const [deleteResult] = await conn.query('DELETE FROM Productos WHERE id_producto = ?', [id]);
-
-      if (deleteResult.affectedRows === 0) {
-        throw new Error('El producto no fue encontrado o ya fue eliminado.');
-      }
-
-      // 4. Confirmar la transacción
-      await conn.commit();
-
-      // 5. Si todo fue bien, eliminar el archivo de imagen del servidor
-      if (imagePath) {
-        const fullPath = path.join(__dirname, '..', imagePath);
-        fs.unlink(fullPath, (err) => {
-          if (err) console.error(`Error al eliminar archivo de imagen ${fullPath}:`, err);
-        });
-      }
+      if (updateResult.affectedRows === 0) throw new Error('El producto no fue encontrado.');
 
       res.json({ mensaje: 'Producto eliminado correctamente.' });
 
@@ -509,7 +490,7 @@ router.post('/proveedores/upload', isAuthenticated, isAdmin, upload.single('file
 
 // Obtener todos los proveedores
 router.get('/proveedores', isAuthenticated, isAdmin, (req, res) => {
-  conexion.query('SELECT * FROM Proveedores', (err, results) => {
+  conexion.query('SELECT * FROM Proveedores WHERE estado = 1', (err, results) => {
     if (err) return res.status(500).json({ mensaje: 'Error al obtener proveedores', error: err });
     res.json(results);
   });
@@ -602,9 +583,11 @@ router.delete('/proveedores/:id', isAuthenticated, isAdmin, (req, res) => {
       });
     }
 
-    // 2. Si no está en uso, proceder a eliminar
-    conexion.query('DELETE FROM Proveedores WHERE id_proveedor = ?', [id], (err) => {
+    // 2. Si no está en uso, proceder a marcar como inactivo
+    const updateSql = 'UPDATE Proveedores SET estado = 2 WHERE id_proveedor = ?';
+    conexion.query(updateSql, [id], (err, result) => {
       if (err) return res.status(500).json({ mensaje: 'Error al eliminar el proveedor.', error: err });
+      if (result.affectedRows === 0) return res.status(404).json({ mensaje: 'Proveedor no encontrado.' });
       res.json({ mensaje: 'Proveedor eliminado con éxito.' });
     });
   });
@@ -679,7 +662,7 @@ router.post('/categorias/upload', isAuthenticated, isAdmin, upload.single('file'
 
 // Obtener todas las categorías (para la tabla de administración)
 router.get('/categorias', isAuthenticated, isAdmin, (req, res) => {
-  conexion.query('SELECT * FROM CategoriaProductos ORDER BY id_categoria ASC', (err, results) => {
+  conexion.query('SELECT * FROM CategoriaProductos WHERE estado = 1 ORDER BY id_categoria ASC', (err, results) => {
     if (err) return res.status(500).json({ mensaje: 'Error al obtener categorías', error: err });
     res.json(results);
   });
@@ -775,9 +758,11 @@ router.delete('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
       });
     }
 
-    // 2. Si no está en uso, proceder a eliminar
-    conexion.query('DELETE FROM CategoriaProductos WHERE id_categoria = ?', [id], (err) => {
+    // 2. Si no está en uso, proceder a marcar como inactiva
+    const updateSql = 'UPDATE CategoriaProductos SET estado = 2 WHERE id_categoria = ?';
+    conexion.query(updateSql, [id], (err, result) => {
       if (err) return res.status(500).json({ mensaje: 'Error al eliminar la categoría.', error: err });
+      if (result.affectedRows === 0) return res.status(404).json({ mensaje: 'Categoría no encontrada.' });
       res.json({ mensaje: 'Categoría eliminada con éxito.' });
     });
   });
