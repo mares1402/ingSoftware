@@ -233,14 +233,12 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
         p.nombre_producto, 
         p.ruta_imagen,
         c.nombre_categoria,
-        GROUP_CONCAT(DISTINCT pr.nombre_proveedor SEPARATOR ', ') AS nombre_proveedor
+        pr.nombre_proveedor
       FROM Productos p
       LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria
       LEFT JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
       LEFT JOIN Proveedores pr ON pp.id_proveedor = pr.id_proveedor
-      WHERE p.estado = 1
-      GROUP BY p.id_producto, p.nombre_producto, p.ruta_imagen, c.nombre_categoria
-      ORDER BY p.id_producto ASC
+    WHERE p.estado = 1
     `;
     conexion.query(sql, (err, results) => {
       if (err) {
@@ -438,10 +436,12 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
         [nombre_producto, id_categoria, newImagePath, id]
       );
 
-      // Asegurar que quede solo la asociación actual: borrar asociaciones previas y crear la nueva.
-      await conn.query('DELETE FROM ProductoProveedor WHERE id_producto = ?', [id]);
-      await conn.query('INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)', [id, id_proveedor]);
-      
+      await conn.query(
+        `INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE id_proveedor = VALUES(id_proveedor)`,
+        [id, id_proveedor]
+      );
+
       await conn.commit();
 
       res.json({ mensaje: 'Producto actualizado correctamente' });
