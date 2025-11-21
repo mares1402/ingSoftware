@@ -812,9 +812,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('edit-correo').value = p.correo || '';
         document.getElementById('edit-direccion').value = p.direccion || '';
 
+        const emailInput = document.getElementById('edit-correo');
+        emailInput.addEventListener('input', () => validateAndDisplayEmailError(emailInput));
+
         const form = document.getElementById('form-editar-proveedor');
         form.onsubmit = async e => {
           e.preventDefault();
+          if (!validateAndDisplayEmailError(document.getElementById('edit-correo'))) {
+            return;
+          }
 
           const data = {
             nombre_proveedor: document.getElementById('edit-nombre').value,
@@ -934,8 +940,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('form-agregar-proveedor');
     form.reset();
 
+    const emailInput = document.getElementById('nuevo-proveedor-correo');
+    emailInput.addEventListener('input', () => validateAndDisplayEmailError(emailInput));
+
     form.onsubmit = async e => {
       e.preventDefault();
+      if (!validateAndDisplayEmailError(document.getElementById('nuevo-proveedor-correo'))) {
+        return;
+      }
 
       const data = {
         nombre_proveedor: document.getElementById('nuevo-proveedor-nombre').value,
@@ -974,6 +986,60 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @param {HTMLInputElement} inputElement El input de tipo 'file'.
    * @param {string} displayElementId El ID del span donde se mostrará el nombre.
    */
+  
+  function validateAndDisplayEmailError(emailInput) {
+    const email = emailInput.value.trim();
+    // This regex is a widely accepted standard that is more robust
+    // and covers a wider range of valid email formats.
+
+    // ← Limpia cualquier error antes de evaluar
+    emailInput.setCustomValidity("");
+
+      if (email === "") {
+        emailInput.setCustomValidity("El correo electrónico es obligatorio.");
+        emailInput.reportValidity();
+        return false;
+    }
+
+    // 2. Debe contener @
+    if (!email.includes("@")) {
+        emailInput.setCustomValidity('Incluye un signo "@" en la dirección de correo electrónico.');
+        emailInput.reportValidity();
+        return false;
+    }
+
+    // Dividir en parte local y dominio
+    const [localPart, dominio] = email.split("@");
+
+    // 3. Debe haber texto después del @
+    if (!dominio || dominio.trim() === "") {
+        emailInput.setCustomValidity(`Ingresa texto después del signo "@". La dirección "${email}" está incompleta.`);
+        emailInput.reportValidity();
+        return false;
+    }
+
+    // 4. Validar extensión .com
+    if (!dominio.endsWith(".com")) {
+        emailInput.setCustomValidity("El correo debe terminar con la extensión .com");
+        emailInput.reportValidity();
+        return false;
+    }
+
+    // 5. Validación general del formato del email (solo si todo lo anterior pasa)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+    if (!emailRegex.test(email)) {
+        emailInput.setCustomValidity("El formato del correo electrónico no es válido.");
+        emailInput.reportValidity();
+        return false;
+    }
+
+      // Email válido, limpiar mensaje
+      emailInput.setCustomValidity("");
+      return true;
+  }
+
+
   function setupFileInputListener(inputId, displayId) {
     const inputElement = document.getElementById(inputId);
     if (!inputElement) return;
