@@ -1018,9 +1018,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         return false;
     }
 
-    // 4. Validar extensión .com
-    if (!dominio.endsWith(".com")) {
-        emailInput.setCustomValidity("El correo debe terminar con la extensión .com");
+    // 4. Validar extensión 
+    const extensionesPermitidas = [".com", ".net", ".org", ".edu", ".mx", ".gov"];
+
+    const tieneExtensionValida = extensionesPermitidas.some(ext =>
+        dominio.toLowerCase().endsWith(ext)
+    );
+
+    if (!tieneExtensionValida) {
+        emailInput.setCustomValidity(
+            "El correo debe terminar con una extensión válida: " + extensionesPermitidas.join(", ")
+        );
         emailInput.reportValidity();
         return false;
     }
