@@ -233,14 +233,12 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
         p.nombre_producto, 
         p.ruta_imagen,
         c.nombre_categoria,
-        GROUP_CONCAT(DISTINCT pr.nombre_proveedor SEPARATOR ', ') AS nombre_proveedor
+        pr.nombre_proveedor
       FROM Productos p
       LEFT JOIN CategoriaProductos c ON p.id_categoria = c.id_categoria
       LEFT JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
       LEFT JOIN Proveedores pr ON pp.id_proveedor = pr.id_proveedor
-      WHERE p.estado = 1
-      GROUP BY p.id_producto, p.nombre_producto, p.ruta_imagen, c.nombre_categoria
-      ORDER BY p.id_producto ASC
+    WHERE p.estado = 1
     `;
     conexion.query(sql, (err, results) => {
       if (err) {
@@ -294,27 +292,34 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
       return res.status(400).json({ mensaje: 'El nombre del producto contiene caracteres no válidos. Solo se permiten letras, números y espacios.' });
     }
 
-    // 1. Verificar si ya existe un producto con el mismo nombre (independientemente de categoría/proveedor)
-    const checkDuplicateSql = 'SELECT id_producto, estado FROM Productos WHERE LOWER(nombre_producto) = LOWER(?)';
-    // Modificamos la consulta para que también devuelva el estado
-    conexion.query(checkDuplicateSql, [nombre_producto], (err, results) => {
+    // 1. Verificar si ya existe un producto con el mismo nombre, categoría y proveedor.
+    const checkDuplicateSql = `
+      SELECT p.id_producto, p.estado 
+      FROM Productos p
+      JOIN ProductoProveedor pp ON p.id_producto = pp.id_producto
+      WHERE LOWER(p.nombre_producto) = LOWER(?) 
+        AND p.id_categoria = ? 
+        AND pp.id_proveedor = ?
+    `;
+    conexion.query(checkDuplicateSql, [nombre_producto, id_categoria, id_proveedor], (err, results) => {
       if (err) {
+        if (req.file) fs.unlinkSync(req.file.path); // Limpiar imagen si hay error
         return res.status(500).json({ mensaje: 'Error al verificar el producto.', error: err });
       }
 
       if (results.length > 0) {
         const existingProduct = results[0];
-        // NOTA: La regla de negocio es que un producto con el mismo nombre es el mismo producto.
-        // Si se intenta crear con el mismo nombre, se reactiva y se actualizan sus datos.
-        // Si ya está activo, se rechaza para evitar confusiones.
+        // Si se encuentra un producto con el mismo nombre, categoría y proveedor.
+        // Si ya está activo, se rechaza para evitar duplicados exactos.
+        // Si está inactivo, se reactiva.
         if (existingProduct.estado === 1) {
           return res.status(409).json({ mensaje: 'Ya existe un producto activo con el mismo nombre, categoría y proveedor.' });
         } else {
-          // Reactivar y actualizar el producto inactivo
+          // Reactivar y actualizar el producto inactivo.
           const rutaImagen = req.file ? `/uploads/products/${req.file.filename}` : null;
           const updateSql = 'UPDATE Productos SET nombre_producto = ?, id_categoria = ?, ruta_imagen = ?, estado = 1 WHERE id_producto = ?';
           conexion.query(updateSql, [nombre_producto, id_categoria, rutaImagen, existingProduct.id_producto], (err) => {
-            if (err) return res.status(500).json({ mensaje: 'Error al reactivar el producto.', error: err });
+            if (err) { if (req.file) fs.unlinkSync(req.file.path); return res.status(500).json({ mensaje: 'Error al reactivar el producto.', error: err }); }
             // No es necesario actualizar ProductoProveedor si la combinación es la misma
             return res.status(200).json({ mensaje: 'Producto reactivado y actualizado correctamente.', id: existingProduct.id_producto });
           });
@@ -322,7 +327,7 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
         }
       }
 
-      // 2. Si no es un duplicado, proceder con la inserción en una transacción
+      // 2. Si no es un duplicado exacto, proceder con la inserción en una transacción
       conexion.getConnection((err, conn) => {
         if (err) return res.status(500).json({ mensaje: 'Error al obtener conexión', error: err });
 
@@ -359,7 +364,7 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
                       });
                     }
                     conn.release();
-                    res.status(201).json({ mensaje: 'Producto creado correctamente', id: id_producto });
+                    res.status(201).json({ mensaje: 'Producto agregado correctamente', id: id_producto });
                   });
                 }
               );
@@ -438,10 +443,12 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
         [nombre_producto, id_categoria, newImagePath, id]
       );
 
-      // Asegurar que quede solo la asociación actual: borrar asociaciones previas y crear la nueva.
-      await conn.query('DELETE FROM ProductoProveedor WHERE id_producto = ?', [id]);
-      await conn.query('INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)', [id, id_proveedor]);
-      
+      await conn.query(
+        `INSERT INTO ProductoProveedor (id_producto, id_proveedor) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE id_proveedor = VALUES(id_proveedor)`,
+        [id, id_proveedor]
+      );
+
       await conn.commit();
 
       res.json({ mensaje: 'Producto actualizado correctamente' });

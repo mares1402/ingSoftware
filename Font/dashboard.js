@@ -415,6 +415,28 @@ document.addEventListener('DOMContentLoaded', async () => {
           </tr>
         `).join('');
 
+        // --- OPTIMIZACIÓN: Delegación de eventos ---
+        tbody.onclick = async (e) => {
+          const editBtn = e.target.closest('.btn-edit-user');
+          const deleteBtn = e.target.closest('.btn-delete-user');
+
+          if (editBtn) {
+            openEditUserModal(editBtn.dataset.id);
+          } else if (deleteBtn) {
+            mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este usuario?', async () => { // Esto usa el modal estilizado
+              try {
+                const res = await fetch(`/api/admin/usuarios/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el usuario');
+                mostrarNotificacion(result.mensaje, 'exito');
+                loadUsuarios();
+              } catch (err) {
+                mostrarNotificacion(err.message, 'error');
+              }
+            });
+          }
+        };
+
         // Configurar búsqueda para la tabla de usuarios
         const searchInput = document.querySelector('.panel-search');
         if (searchInput && tbody) {
@@ -462,6 +484,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         </tr>
       `).join('');
 
+      tablaBody.onclick = async (e) => {
+        const editBtn = e.target.closest('.btn-edit-product');
+        const deleteBtn = e.target.closest('.btn-delete-product');
+
+        if (editBtn) {
+          openEditProductModal(editBtn.dataset.id);
+        } else if (deleteBtn) {
+          mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este producto? Esto también borrará su imagen.', async () => {
+            try {
+              const res = await fetch(`/api/admin/productos/${deleteBtn.dataset.id}`, { 
+                method: 'DELETE', 
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' } // <-- Cabecera añadida
+              });
+              const result = await res.json();
+              if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el producto');
+              mostrarNotificacion(result.mensaje, 'exito');
+              loadProductos();
+            } catch (err) {
+              mostrarNotificacion(err.message, 'error');
+            }
+          });
+        }
+      };
+
       // Configurar búsqueda para la tabla de productos
       const searchInput = document.querySelector('.panel-search');
       if (searchInput && tablaBody) {
@@ -507,6 +554,28 @@ document.addEventListener('DOMContentLoaded', async () => {
           </tr>
         `).join('');
 
+        tbody.onclick = async (e) => {
+          const editBtn = e.target.closest('.btn-edit-supplier');
+          const deleteBtn = e.target.closest('.btn-delete-supplier');
+
+          if (editBtn) {
+            openEditSupplierModal(editBtn.dataset.id);
+          } else if (deleteBtn) {
+            mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este proveedor?', async () => {
+              try {
+                const res = await fetch(`/api/admin/proveedores/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el proveedor');
+                cachedSuppliers = null; // Invalidar caché para que se recargue
+                mostrarNotificacion(result.mensaje, 'exito');
+                loadProveedores();
+              } catch (err) {
+                mostrarNotificacion(err.message, 'error');
+              }
+            });
+          }
+        };
+
         // Configurar búsqueda para la tabla de proveedores
         const searchInput = document.querySelector('.panel-search');
         if (searchInput && tbody) {
@@ -548,6 +617,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             </td>
           </tr>
         `).join('');
+
+        tbody.onclick = async (e) => {
+          const editBtn = e.target.closest('.btn-edit-category');
+          const deleteBtn = e.target.closest('.btn-delete-category');
+
+          if (editBtn) {
+            openEditCategoryModal(editBtn.dataset.id);
+          } else if (deleteBtn) {
+            mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar esta categoría?', async () => {
+              try {
+                const res = await fetch(`/api/admin/categorias/${deleteBtn.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar la categoría');
+                cachedCategories = null; // Invalidar caché
+                mostrarNotificacion(result.mensaje, 'exito');
+                loadCategorias();
+              } catch (err) {
+                mostrarNotificacion(err.message, 'error');
+              }
+            });
+          }
+        };
+
+        // Configurar botón de añadir
+        const addBtn = document.querySelector('.btn-add-new');
+        if (addBtn) addBtn.onclick = () => openAddCategoryModal();
 
         // Configurar búsqueda para la tabla de categorías
         const searchInput = document.querySelector('.panel-search');
@@ -748,9 +843,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('edit-correo').value = p.correo || '';
         document.getElementById('edit-direccion').value = p.direccion || '';
 
+        const emailInput = document.getElementById('edit-correo');
+        emailInput.addEventListener('input', () => validateAndDisplayEmailError(emailInput));
+
         const form = document.getElementById('form-editar-proveedor');
         form.onsubmit = async e => {
           e.preventDefault();
+          if (!validateAndDisplayEmailError(document.getElementById('edit-correo'))) {
+            return;
+          }
 
           const data = {
             nombre_proveedor: document.getElementById('edit-nombre').value,
@@ -870,8 +971,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('form-agregar-proveedor');
     form.reset();
 
+    const emailInput = document.getElementById('nuevo-proveedor-correo');
+    emailInput.addEventListener('input', () => validateAndDisplayEmailError(emailInput));
+
     form.onsubmit = async e => {
       e.preventDefault();
+      if (!validateAndDisplayEmailError(document.getElementById('nuevo-proveedor-correo'))) {
+        return;
+      }
 
       const data = {
         nombre_proveedor: document.getElementById('nuevo-proveedor-nombre').value,
@@ -910,6 +1017,68 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @param {HTMLInputElement} inputElement El input de tipo 'file'.
    * @param {string} displayElementId El ID del span donde se mostrará el nombre.
    */
+  
+  function validateAndDisplayEmailError(emailInput) {
+    const email = emailInput.value.trim();
+    // This regex is a widely accepted standard that is more robust
+    // and covers a wider range of valid email formats.
+
+    // ← Limpia cualquier error antes de evaluar
+    emailInput.setCustomValidity("");
+
+      if (email === "") {
+        emailInput.setCustomValidity("El correo electrónico es obligatorio.");
+        emailInput.reportValidity();
+        return false;
+    }
+
+    // 2. Debe contener @
+    if (!email.includes("@")) {
+        emailInput.setCustomValidity('Incluye un signo "@" en la dirección de correo electrónico.');
+        emailInput.reportValidity();
+        return false;
+    }
+
+    // Dividir en parte local y dominio
+    const [localPart, dominio] = email.split("@");
+
+    // 3. Debe haber texto después del @
+    if (!dominio || dominio.trim() === "") {
+        emailInput.setCustomValidity(`Ingresa texto después del signo "@". La dirección "${email}" está incompleta.`);
+        emailInput.reportValidity();
+        return false;
+    }
+
+    // 4. Validar extensión 
+    const extensionesPermitidas = [".com", ".net", ".org", ".edu", ".mx", ".gov"];
+
+    const tieneExtensionValida = extensionesPermitidas.some(ext =>
+        dominio.toLowerCase().endsWith(ext)
+    );
+
+    if (!tieneExtensionValida) {
+        emailInput.setCustomValidity(
+            "El correo debe terminar con una extensión válida: " + extensionesPermitidas.join(", ")
+        );
+        emailInput.reportValidity();
+        return false;
+    }
+
+    // 5. Validación general del formato del email (solo si todo lo anterior pasa)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+    if (!emailRegex.test(email)) {
+        emailInput.setCustomValidity("El formato del correo electrónico no es válido.");
+        emailInput.reportValidity();
+        return false;
+    }
+
+      // Email válido, limpiar mensaje
+      emailInput.setCustomValidity("");
+      return true;
+  }
+
+
   function setupFileInputListener(inputId, displayId) {
     const inputElement = document.getElementById(inputId);
     if (!inputElement) return;
@@ -1126,64 +1295,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Delegación de eventos para botones dinámicos ---
     // Esto asegura que los botones funcionen incluso si se recargan con el contenido.
-    contentArea.addEventListener('click', async e => {
+    contentArea.addEventListener('click', e => {
       const target = e.target.closest('button');
       if (!target) return;
 
-      // Botón de añadir nuevo
+      // El botón de añadir puede estar en varios paneles, así que lo manejamos aquí
       if (target.matches('.btn-add-new')) {
         e.preventDefault();
         if (document.getElementById('productsTable')) openAddProductModal();
         if (document.getElementById('suppliersTable')) openAddSupplierModal();
         if (document.getElementById('categoriesTable')) openAddCategoryModal();
-      }
-
-      // Botones de editar
-      if (target.matches('.btn-edit-user')) openEditUserModal(target.dataset.id);
-      if (target.matches('.btn-edit-product')) openEditProductModal(target.dataset.id);
-      if (target.matches('.btn-edit-supplier')) openEditSupplierModal(target.dataset.id);
-      if (target.matches('.btn-edit-category')) openEditCategoryModal(target.dataset.id);
-
-      // Botones de eliminar
-      if (target.matches('.btn-delete-user')) {
-        mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este usuario?', async () => {
-          try {
-            const res = await fetch(`/api/admin/usuarios/${target.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el usuario');
-            mostrarNotificacion(result.mensaje, 'exito');
-            loadUsuarios();
-          } catch (err) {
-            mostrarNotificacion(err.message, 'error');
-          }
-        });
-      }
-      if (target.matches('.btn-delete-product')) {
-        mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este producto?', async () => {
-          try {
-            const res = await fetch(`/api/admin/productos/${target.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el producto');
-            mostrarNotificacion(result.mensaje, 'exito');
-            loadProductos();
-          } catch (err) {
-            mostrarNotificacion(err.message, 'error');
-          }
-        });
-      }
-      if (target.matches('.btn-delete-supplier')) {
-        mostrarConfirmacion('Confirmar Eliminación', '¿Seguro que deseas eliminar este proveedor?', async () => {
-          try {
-            const res = await fetch(`/api/admin/proveedores/${target.dataset.id}`, { method: 'DELETE', credentials: 'same-origin' });
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.mensaje || 'No se pudo eliminar el proveedor');
-            cachedSuppliers = null;
-            mostrarNotificacion(result.mensaje, 'exito');
-            loadProveedores();
-          } catch (err) {
-            mostrarNotificacion(err.message, 'error');
-          }
-        });
       }
     });
 
