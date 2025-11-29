@@ -8,27 +8,6 @@
         <link rel="stylesheet" href="Font/index.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
         <link rel="icon" type="image/png" href="Font/imgs/mount logo.png">
-        <style>
-            /* Estilos para el botón de limpiar filtros */
-            .clear-filter-button {
-                width: 100%;
-                padding: 10px;
-                margin-top: 10px; /* Espacio entre los botones */
-                background-color: transparent;
-                color: #e74c3c; /* Un color rojo suave para indicar "limpiar" o "eliminar" */
-                border: 1px solid #e74c3c;
-                border-radius: 5px;
-                font-size: 1rem;
-                font-weight: bold;
-                cursor: pointer;
-                transition: background-color 0.3s, color 0.3s;
-            }
-
-            .clear-filter-button:hover {
-                background-color: #e74c3c;
-                color: #fff;
-            }
-        </style>
     </head>
     <body>
         <div class="top-bar">
@@ -59,6 +38,10 @@
                 </div>
                 <!-- Contenedor para los botones de usuario, se llenará con JS -->
                 <div class="user-actions" id="user-actions-container"></div>
+                <a href="#" class="cart-button" aria-label="Carrito de compras">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span class="cart-counter">0</span>
+                </a>
             </div>
 
             <button class="mobile-nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
@@ -94,8 +77,301 @@
                 </div>
             </div>
         </main>
+        
+        <!-- Panel lateral del carrito -->
+        <div id="cart-panel" class="cart-panel">
+            <div class="cart-panel-header">
+                <h3>Tu Carrito</h3>
+                <button id="close-cart-btn" class="close-filter-btn" aria-label="Cerrar carrito"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="cart-panel-body" class="cart-panel-body">
+                <p>Tu carrito está vacío.</p>
+            </div>
+            <div class="cart-panel-footer">
+                <!-- BOTÓN DE COTIZACIÓN -->
+                <button id="btn-generate-quote" class="btn-submit btn-checkout">
+                    <i class="fa-solid fa-file-invoice"></i> Generar Cotización
+                </button>
+            </div>
+        </div>
         <div class="overlay"></div>
         
         <script src="Font/main.js"></script>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const productGrid = document.querySelector('.product-grid');
+                const cartCounter = document.querySelector('.cart-counter');
+                const cartButton = document.querySelector('.cart-button');
+                const cartPanel = document.getElementById('cart-panel');
+                const closeCartBtn = document.getElementById('close-cart-btn');
+                const generateQuoteBtn = document.getElementById('btn-generate-quote');
+
+                // OPTIMIZACIÓN: Usar un Map para caché de productos (búsquedas O(1)).
+                let allProductsCache = [];
+                let productsLoaded = false;
+
+                // El carrito se inicializa vacío. Se cargará cuando se confirme la sesión del usuario.
+                let cart = [];
+
+                /**
+                 * Actualiza el contador del carrito en la UI y guarda el carrito en localStorage.
+                 */
+                function updateCart() {
+                    const footer = document.querySelector('.cart-panel-footer');
+                    const userId = document.body.dataset.userId;
+                    const userType = document.body.dataset.userType;
+
+                    // Si no es un cliente, el carrito se vacía y el contador se pone a 0.
+                    if (userType !== '1' || !userId) {
+                        cart = [];
+                        cartCounter.textContent = '0';
+                        if (footer) footer.style.display = 'none';
+                        // No guardamos nada en localStorage si no hay usuario.
+                        return;
+                    }
+
+                    // El contador muestra el número de *tipos* de productos diferentes.
+                    cartCounter.textContent = cart.length;
+
+                    // Mostrar u ocultar el footer con el botón de cotización
+                    if (footer) footer.style.display = cart.length > 0 ? 'block' : 'none';
+
+                    // Guardar el carrito en una clave específica para el usuario.
+                    const userCartKey = `shoppingCart_${userId}`;
+                    localStorage.setItem(userCartKey, JSON.stringify(cart));
+                }
+
+                /**
+                 * Carga el carrito del usuario desde localStorage.
+                 */
+                function loadUserCart() {
+                    const userId = document.body.dataset.userId;
+                    if (!userId) return;
+                    const userCartKey = `shoppingCart_${userId}`;
+                    cart = JSON.parse(localStorage.getItem(userCartKey)) || [];
+                    updateCart();
+                    renderCartPanel(); // Renderizar el panel con los datos cargados
+                }
+
+                /**
+                 * Dibuja los productos del carrito en el panel lateral.
+                 */
+                async function renderCartPanel() {
+                    const cartBody = document.getElementById('cart-panel-body');
+
+                    if (cart.length === 0) {
+                        cartBody.innerHTML = '<p>Tu carrito está vacío.</p>';
+                        return;
+                    }
+
+                    // Si los productos no se han cargado, los cargamos una vez.
+                    if (!productsLoaded) {
+                        try {
+                            // OPTIMIZACIÓN: Convertir el array de productos en un Map al cargarlo.
+                            const response = await fetch('/api/productos');
+                            const productsArray = await response.json();
+                            allProductsCache = new Map(productsArray.map(p => [p.id_producto.toString(), p]));
+                            productsLoaded = true;
+                        } catch (error) {
+                            console.error("Error cargando datos de productos para el carrito:", error);
+                            cartBody.innerHTML = '<p>Error al cargar productos.</p>';
+                            return;
+                        }
+                    }
+
+                    cartBody.innerHTML = ''; // Limpiar el panel
+
+                    cart.forEach(item => {
+                        // OPTIMIZACIÓN: Búsqueda instantánea en el Map.
+                        const productDetails = allProductsCache.get(item.productId);
+                        if (productDetails) {
+                            const itemHtml = `
+                                <div class="cart-item" data-product-id="${item.productId}">
+                                    <img src="${productDetails.ruta_imagen || 'Font/imgs/producto_placeholder.png'}" alt="${productDetails.nombre_producto}" class="cart-item-img">
+                                    <div class="cart-item-info">
+                                        <h4>${productDetails.nombre_producto}</h4>
+                                        <div class="cart-item-actions">
+                                            <button class="cart-quantity-btn decrease-qty" aria-label="Disminuir cantidad">-</button>
+                                            <span>${item.quantity}</span>
+                                            <button class="cart-quantity-btn increase-qty" aria-label="Aumentar cantidad">+</button>
+                                            <button class="cart-delete-btn delete-item" aria-label="Eliminar producto"><i class="fa-solid fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            cartBody.innerHTML += itemHtml;
+                        }
+                    });
+                }
+
+                /**
+                 * Muestra una notificación flotante (toast).
+                 * @param {string} message El mensaje a mostrar.
+                 * @param {string} [type='info'] El tipo: 'success', 'error', o 'info'.
+                 */
+                function showToastNotification(message, type = 'info') {
+                    const toast = document.createElement('div');
+                    toast.className = `toast-notification ${type}`;
+                    toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i> ${message}`;
+                    document.body.appendChild(toast);
+
+                    setTimeout(() => toast.classList.add('show'), 10);
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                        toast.addEventListener('transitionend', () => toast.remove());
+                    }, 3000);
+                }
+
+                /**
+                 * Muestra/Oculta el panel del carrito y el overlay.
+                 */
+                function toggleCartPanel() {
+                    // Antes de mostrar el panel, nos aseguramos de que su contenido esté actualizado.
+                    if (!cartPanel.classList.contains('active')) {
+                        renderCartPanel();
+                    }
+                    cartPanel.classList.toggle('active');
+                    // document.body.classList.toggle('no-scroll'); // <-- REVERTIDO: No es necesario bloquear el scroll del body
+                    document.querySelector('.overlay').classList.toggle('active');
+                }
+
+                function setupEventListeners() {
+                    productGrid.addEventListener('click', (e) => {
+                        // Buscar si el clic fue en un botón de añadir al carrito
+                        const addToCartButton = e.target.closest('.add-to-cart-btn');
+
+                        if (addToCartButton) {
+                            e.preventDefault();
+                            const productId = addToCartButton.dataset.productId;
+                            const userType = document.body.dataset.userType;
+                            
+                            // --- Lógica de Restricción ---
+                            if (!userType) {
+                                // 1. No ha iniciado sesión
+                                showToastNotification('Debes iniciar sesión para comprar.', 'error');
+                                // Esperar un poco antes de redirigir para que el usuario lea el mensaje
+                                setTimeout(() => {
+                                    window.location.href = 'Font/login.html';
+                                }, 1500);
+                                return;
+                            }
+
+                            if (userType === '2') {
+                                // 2. Es administrador
+                                showToastNotification('Los administradores no pueden comprar.', 'info');
+                                return;
+                            }
+
+                            // 3. Es cliente (userType === '1'), puede comprar
+                            if (productId && userType === '1') {
+                                // --- Lógica para añadir o incrementar cantidad ---
+                                const existingProduct = cart.find(item => item.productId === productId);
+
+                                if (existingProduct) {
+                                    // Si el producto ya está en el carrito, incrementa la cantidad
+                                    existingProduct.quantity++;
+                                } else {
+                                    // Si es un producto nuevo, lo añade con cantidad 1
+                                    cart.push({ productId: productId, quantity: 1 });
+                                }
+
+                                updateCart(); // Actualizar contador y localStorage
+                                // El mensaje ahora es más útil
+                                // Si el panel ya está abierto, lo volvemos a renderizar para que se vea el cambio.
+                                if (cartPanel.classList.contains('active')) {
+                                    renderCartPanel();
+                                }
+                                showToastNotification('Cantidad actualizada en el carrito.', 'success');
+                            }
+                        }
+                    });
+
+                    // Delegación de eventos para los botones DENTRO del panel del carrito
+                    cartPanel.addEventListener('click', e => {
+                        const target = e.target;
+                        const cartItemDiv = target.closest('.cart-item');
+                        if (!cartItemDiv) return;
+
+                        const productId = cartItemDiv.dataset.productId;
+                        const productInCart = cart.find(item => item.productId === productId);
+                        if (!productInCart) return;
+
+                        if (target.matches('.increase-qty')) {
+                            // Aumentar cantidad
+                            productInCart.quantity++;
+                        } else if (target.matches('.decrease-qty')) {
+                            // Disminuir cantidad
+                            productInCart.quantity--;
+                            if (productInCart.quantity <= 0) {
+                                // Si la cantidad es 0 o menos, eliminar el producto
+                                cart = cart.filter(item => item.productId !== productId);
+                            }
+                        } else if (target.matches('.delete-item') || target.closest('.delete-item')) {
+                            // Eliminar producto
+                            cart = cart.filter(item => item.productId !== productId);
+                        }
+
+                        updateCart();
+                        renderCartPanel(); // Volver a dibujar el panel para reflejar los cambios
+                    });
+
+                    // Eventos para abrir y cerrar el panel del carrito
+                    cartButton.addEventListener('click', toggleCartPanel);
+                    closeCartBtn.addEventListener('click', toggleCartPanel);
+                    document.querySelector('.overlay').addEventListener('click', () => {
+                        if (cartPanel.classList.contains('active')) {
+                            toggleCartPanel();
+                        }
+                        if (document.querySelector('.filter-sidebar.active')) {
+                            // Este es un apaño por si el overlay se queda activo por el menú de filtros
+                        }
+                    });
+                }
+
+                async function handleGenerateQuote() {
+                    if (cart.length === 0) {
+                        showToastNotification('Tu carrito está vacío.', 'error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/api/quotes', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ cart: cart })
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            showToastNotification('Cotización generada con éxito.', 'success');
+                            cart = []; // Vaciar el carrito
+                            updateCart(); // Actualizar UI
+                            renderCartPanel(); // Volver a dibujar el panel (ahora vacío)
+                            // Opcional: redirigir al dashboard
+                            setTimeout(() => window.location.href = '/dashboard', 1500);
+                        } else {
+                            throw new Error(result.mensaje || 'Error al generar la cotización');
+                        }
+                    } catch (error) {
+                        showToastNotification(error.message, 'error');
+                    }
+                }
+
+                // --- INICIALIZACIÓN ---
+
+                // Configurar todos los listeners de la página
+                setupEventListeners();
+
+                // Escuchar el evento personalizado desde main.js para cargar el carrito
+                // tan pronto como la sesión del usuario sea verificada.
+                document.addEventListener('session-verified', () => {
+                    loadUserCart();
+                });
+
+                generateQuoteBtn.addEventListener('click', handleGenerateQuote);
+            });
+        </script>
     </body>
 </html>

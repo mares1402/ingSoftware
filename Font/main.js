@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <h3 class="product-title">${producto.nombre_producto}</h3>
              <p class="product-brand">${marca}</p> <!-- <-- La mostramos aquí -->
               <p class="product-description">${descripcion}</p>
-              <button class="buy-button" aria-label="Añadir al carrito">
+              <button class="buy-button add-to-cart-btn" data-product-id="${producto.id_producto}" aria-label="Añadir al carrito">
                 <i class="fa-solid fa-cart-shopping"></i>
               </button>
           </div>
@@ -154,6 +154,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const { user } = await res.json();
         const esAdmin = Number(user.tipo_usuario) === 2;
 
+        // Guardar el tipo de usuario en el body para que otros scripts lo puedan usar
+        document.body.dataset.userType = user.tipo_usuario;
+        document.body.dataset.userId = user.id_usuario; // <-- AÑADIDO: Guardar el ID del usuario
+
         userActionsContainer.innerHTML = `
           <a href="/dashboard" class="login-link" title="Mi Cuenta">
             <i class="fa-solid fa-user"></i> ${esAdmin ? 'Dashboard' : 'Mi Perfil'}
@@ -167,12 +171,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // Añadir evento al botón de logout
         document.getElementById('logout-btn').addEventListener('click', async (e) => {
           e.preventDefault();
+          // Limpiar el carrito del almacenamiento local al cerrar sesión
+          localStorage.removeItem('shoppingCart');
           await fetch('/logout', { method: 'POST' });
           window.location.href = '/';
         });
 
       } else {
         // No hay sesión iniciada
+        localStorage.removeItem('shoppingCart'); // Limpiar carrito si no hay sesión
+        // Asegurarse de que no haya datos de usuario guardados en el body
+        delete document.body.dataset.userType;
+        delete document.body.dataset.userId; // <-- AÑADIDO: Limpiar el ID del usuario
+
         userActionsContainer.innerHTML = `
           <a href="Font/login.html" class="login-link">Iniciar sesión</a>
           <span class="separator">|</span>
@@ -182,12 +193,20 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       console.error("Error verificando sesión:", error);
       // En caso de error (ej. servidor caído), mostrar los botones de login por defecto
+      localStorage.removeItem('shoppingCart'); // Limpiar también en caso de error
+      // y limpiar cualquier dato de usuario residual.
+      delete document.body.dataset.userType;
+      delete document.body.dataset.userId; // <-- AÑADIDO: Limpiar el ID del usuario
+
       userActionsContainer.innerHTML = `
         <a href="Font/login.html" class="login-link">Iniciar sesión</a>
         <span class="separator">|</span>
         <a href="Font/signup.html" class="login-link">Registrarse</a>
       `;
     }
+
+    // Disparar un evento para notificar que la verificación de sesión ha terminado.
+    document.dispatchEvent(new CustomEvent('session-verified'));
   }
 
   // --- Lógica para menús móviles ---

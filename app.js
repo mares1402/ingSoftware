@@ -135,6 +135,62 @@ app.get('/api/marcas', (req, res) => {
   });
 });
 
+// --- API de Cotizaciones (para Clientes) ---
+
+// Obtener todas las cotizaciones del usuario logueado
+app.get('/api/quotes', isAuthenticated, (req, res) => {
+  const userId = req.session.user.id_usuario;
+  const sql = `
+    SELECT 
+      id_cotizacion, 
+      fecha_cotizacion, 
+      estado_cotizacion 
+    FROM Cotizaciones 
+    WHERE id_usuario = ? 
+    ORDER BY fecha_cotizacion DESC
+  `;
+
+  conexion.query(sql, [userId], (err, results) => {
+    if (err) {
+      console.error('Error al obtener cotizaciones:', err);
+      return res.status(500).json({ mensaje: 'Error interno del servidor' });
+    }
+    res.json(results);
+  });
+});
+
+// Crear una nueva cotización desde el carrito
+app.post('/api/quotes', isAuthenticated, (req, res) => {
+  const userId = req.session.user.id_usuario;
+  const { cart } = req.body; // [{ productId: '1', quantity: 2 }, ...]
+
+  if (!cart || cart.length === 0) {
+    return res.status(400).json({ mensaje: 'El carrito está vacío.' });
+  }
+
+  // 1. Insertar la cotización principal
+  const quoteSql = 'INSERT INTO Cotizaciones (id_usuario, fecha_cotizacion, estado_cotizacion) VALUES (?, NOW(), ?)';
+  conexion.query(quoteSql, [userId, 'Pendiente'], (err, result) => {
+    if (err) {
+      console.error('Error al crear cotización:', err);
+      return res.status(500).json({ mensaje: 'Error al guardar la cotización.' });
+    }
+
+    const quoteId = result.insertId;
+    // 2. Insertar los detalles de la cotización
+    const detailSql = 'INSERT INTO DetalleCotizacion (id_cotizacion, id_producto, cantidad) VALUES ?';
+    const detailValues = cart.map(item => [quoteId, item.productId, item.quantity]);
+
+    conexion.query(detailSql, [detailValues], (err, detailResult) => {
+      if (err) {
+        console.error('Error al guardar detalles de cotización:', err);
+        return res.status(500).json({ mensaje: 'Error al guardar los productos de la cotización.' });
+      }
+      res.status(201).json({ mensaje: 'Cotización generada con éxito', id_cotizacion: quoteId });
+    });
+  });
+});
+
 // Servir dashboard protegido
 app.get('/dashboard', isAuthenticated, (req, res, next) => {
   const dashboardPath = path.join(__dirname, 'Private', 'dashboard.html');
@@ -146,17 +202,42 @@ app.get('/dashboard', isAuthenticated, (req, res, next) => {
 });
 
 
-app.get('/api/admin/panel/:panelName', isAuthenticated, (req, res) => {
+// Ruta para cargar paneles (admin y usuario normal)
+app.get('/api/panel/:panelName', isAuthenticated, (req, res) => {
   const panelName = req.params.panelName;
-  // Solo los admins pueden acceder a los paneles de admin
-  if (panelName.startsWith('admin-') && Number(req.session.user.tipo_usuario) !== 2) {
-    return res.status(403).send('Acceso denegado');
+  const userType = Number(req.session.user.tipo_usuario);
+  
+  // Solo los admins pueden acceder a los paneles que comienzan con 'admin-'
+  if (panelName.startsWith('admin-') && userType !== 2) {
+    return res.status(403).send('Acceso denegado: Solo administradores pueden acceder a este panel');
   }
+  
   const panelPath = path.join(__dirname, 'Private', panelName);
 
   if (fs.existsSync(panelPath)) {
     res.sendFile(panelPath);
   } else {
+    console.error(`Panel no encontrado: ${panelName} en ruta: ${panelPath}`);
+    res.status(404).send('Panel no encontrado');
+  }
+});
+
+// Mantener la ruta antigua para compatibilidad
+app.get('/api/admin/panel/:panelName', isAuthenticated, (req, res) => {
+  const panelName = req.params.panelName;
+  const userType = Number(req.session.user.tipo_usuario);
+  
+  // Solo los admins pueden acceder a los paneles que comienzan con 'admin-'
+  if (panelName.startsWith('admin-') && userType !== 2) {
+    return res.status(403).send('Acceso denegado: Solo administradores pueden acceder a este panel');
+  }
+  
+  const panelPath = path.join(__dirname, 'Private', panelName);
+
+  if (fs.existsSync(panelPath)) {
+    res.sendFile(panelPath);
+  } else {
+    console.error(`Panel no encontrado: ${panelName} en ruta: ${panelPath}`);
     res.status(404).send('Panel no encontrado');
   }
 });

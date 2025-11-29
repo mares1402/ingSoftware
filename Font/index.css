@@ -536,3 +536,275 @@ body.no-scroll {
   }
   .product-title { font-size: 1rem; }
 }
+
+/* === AÑADIDO: Estilos movidos desde index.html === */
+
+/* Estilos para el botón de limpiar filtros */
+.clear-filter-button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px; /* Espacio entre los botones */
+    background-color: transparent;
+    color: #e74c3c; /* Un color rojo suave para indicar "limpiar" o "eliminar" */
+    border: 1px solid #e74c3c;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.clear-filter-button:hover {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+/* Estilos para el botón del carrito */
+.cart-button {
+    position: relative;
+    color: #fff; /* Cambiado a blanco para mejor contraste */
+    font-size: 1.5rem;
+    margin-left: 20px; /* Espacio a la izquierda */
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.cart-button:hover {
+    color: #ddd; /* Un gris claro para el efecto hover */
+}
+
+.cart-counter {
+    position: absolute;
+    top: -8px;
+    right: -12px;
+    background-color: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* Estilos para el panel lateral del carrito */
+.cart-panel {
+    position: fixed;
+    top: 0;
+    right: 0; /* Se fija a la derecha */
+    width: 380px;
+    max-width: 90vw; /* Para que se vea bien en móviles */
+    height: 100%;
+    background-color: #fff;
+    box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+    z-index: 1001; /* Por encima del overlay */
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%); /* Inicia fuera de la pantalla usando transform */
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* Animación suave */
+}
+
+.cart-panel.active {
+    transform: translateX(0); /* Se desliza a la vista */
+}
+
+.cart-panel-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cart-panel-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+/* CORRECCIÓN: Asegura que el botón de cierre del carrito sea siempre visible */
+.cart-panel-header .close-filter-btn {
+    display: block; /* Sobrescribe el 'display: none' de la regla general */
+    width: 32px;
+    height: 32px;
+    padding: 5px;
+    line-height: 1;
+    border-radius: 50%;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.cart-panel-header .close-filter-btn:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.cart-panel-body {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+    text-align: center;
+    color: #777;
+}
+
+.cart-panel-footer {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    background-color: #f9f9f9;
+    display: flex;
+    justify-content: center;
+}
+
+.btn-checkout {
+    width: 100%;
+}
+
+/* Estilos para el botón principal de acción (Generar Cotización) */
+.btn-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 20px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #fff;
+    background-color: #007bff; /* Azul primario */
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+}
+.btn-submit:hover {
+    background-color: #0056b3; /* Azul más oscuro */
+}
+.btn-submit:active {
+    transform: scale(0.98); /* Efecto de clic */
+}
+
+/* Estilos para los items dentro del panel del carrito */
+.cart-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+    text-align: left;
+}
+.cart-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+.cart-item-img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+.cart-item-info {
+    flex-grow: 1;
+}
+.cart-item-info h4 {
+    margin: 0 0 5px 0;
+    font-size: 0.95rem;
+    color: #333;
+}
+.cart-item-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+.cart-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+.cart-quantity-btn, .cart-delete-btn {
+    background: #f0f0f0;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #555;
+    transition: background-color 0.2s, color 0.2s;
+}
+.cart-quantity-btn:hover { background-color: #e0e0e0; }
+.cart-delete-btn {
+    margin-left: auto; /* Empuja el botón de basura a la derecha */
+    color: #e74c3c;
+}
+.cart-delete-btn:hover { background-color: #e74c3c; color: #fff; }
+
+/* Ocultar carrito para administradores */
+body[data-user-type="2"] .cart-button {
+    display: none;
+}
+
+/* Estilos para las notificaciones (Toasts) */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #333;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transform: translateX(120%);
+    transition: transform 0.5s ease-in-out;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.toast-notification.show {
+    transform: translateX(0);
+}
+.toast-notification.success {
+    background-color: #28a745;
+}
+.toast-notification.error {
+    background-color: #dc3545;
+}
+.toast-notification.info {
+    background-color: #17a2b8;
+}
+
+/* === AÑADIDO: Estilos para la página "Mis Cotizaciones" === */
+
+/* Contenedor de acciones para cada cotización */
+.quote-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end; /* Alinea los botones a la derecha */
+}
+
+/* Estilo base para los nuevos botones */
+.btn-edit-quote,
+.btn-download-pdf {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.3s, transform 0.1s;
+}
+
+.btn-edit-quote {
+    background-color: #ffc107; /* Amarillo para editar */
+    color: #212529;
+}
+.btn-edit-quote:hover { background-color: #e0a800; }
+
+.btn-download-pdf {
+    background-color: #dc3545; /* Rojo para PDF */
+    color: #fff;
+}
+.btn-download-pdf:hover { background-color: #c82333; }

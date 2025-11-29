@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         contentArea.innerHTML = '<p>Cargando...</p>';
         try {
-          const resp = await fetch(`/api/admin/panel/${section}`, { credentials: 'same-origin' });
+          const resp = await fetch(`/api/panel/${section}`, { credentials: 'same-origin' });
           if (!resp.ok) throw new Error(`No se pudo cargar el panel ${section}`);
 
           // Obtener el nombre de la sección desde el texto del link
@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (section === 'admin-products.html') loadProductos();
           if (section === 'admin-suppliers.html') loadProveedores();
           if (section === 'admin-categories.html') loadCategorias(); 
-          // Aquí podrías añadir la carga de datos para las cotizaciones en el futuro
+          if (section === 'client-quotes.html') loadClientQuotes();
 
           // Configurar listener para el input de Excel
           setupFileInputListener('excelProductos', 'excel-productos-filename');
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const modalId = modalFile.replace('.html', '');
       if (document.getElementById(modalId)) return;
 
-      const resp = await fetch(`/api/admin/panel/${modalFile}`, { credentials: 'same-origin' });
+      const resp = await fetch(`/api/panel/${modalFile}`, { credentials: 'same-origin' });
       if (resp.ok) {
         const modalHtml = await resp.text();
         document.body.insertAdjacentHTML('beforeend', modalHtml); // Añade el modal al final del body
@@ -356,6 +356,37 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
+    // --- Cargar cotizaciones del cliente ---
+    async function loadClientQuotes() {
+      try {
+        const res = await fetch('/api/quotes', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('No se pudieron obtener tus cotizaciones');
+        const quotes = await res.json();
+
+        const tbody = document.getElementById('quotesTableBody');
+        if (!tbody) return;
+
+        if (quotes.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">Aún no has generado ninguna cotización.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = quotes.map(q => {
+          const fecha = new Date(q.fecha_cotizacion).toLocaleDateString('es-MX', {
+            year: 'numeric', month: 'long', day: 'numeric'
+          });
+          return `
+            <tr>
+              <td>#${String(q.id_cotizacion).padStart(6, '0')}</td>
+              <td>${fecha}</td>
+              <td><span class="status-badge status-${q.estado_cotizacion.toLowerCase()}">${q.estado_cotizacion}</span></td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        mostrarNotificacion('Error cargando cotizaciones: ' + err.message, 'error');
+      }
+    }
     // --- Función para cargar usuarios ---
     async function loadUsuarios() {
       try {
