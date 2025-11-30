@@ -78,14 +78,23 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
 
     // Evitar que un admin se elimine a sí mismo
     if (req.session.user.id_usuario == id) {
-      return res.status(400).json({ mensaje: 'No puedes eliminar tu propia cuenta de administrador' });
+        return res.status(400).json({ mensaje: 'No puedes eliminar tu propia cuenta de administrador' });
     }
 
-    conexion.query('DELETE FROM Usuario WHERE id_usuario=?', [id], (err) => {
-      if (err) return res.status(500).json({ mensaje: 'Error al eliminar usuario', error: err });
-      res.json({ mensaje: 'Usuario eliminado con éxito' });
+    const sql = `UPDATE Usuario SET estado = 2 WHERE id_usuario = ?`;
+
+    conexion.query(sql, [id], (err) => {
+        if (err) {
+            return res.status(500).json({
+                mensaje: 'Error al actualizar estado del usuario',
+                error: err
+            });
+        }
+
+        res.json({ mensaje: 'Usuario marcado como inactivo correctamente' });
     });
   });
+
 
   // --- PRODUCTOS ---
   // === SUBIR PRODUCTOS DESDE EXCEL ===
@@ -991,9 +1000,112 @@ router.delete('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
   });
 });
 
+
+// --- COTIZACIONES ---
+
+// Listar todas las cotizaciones
+router.get('/cotizaciones', isAuthenticated, isAdmin, (req, res) => {
+  const sql = `
+    SELECT c.id_cotizacion, c.id_usuario, c.fecha_cotizacion, c.estado_cotizacion, c.total,
+           u.correo AS correo_usuario
+    FROM Cotizaciones c
+    JOIN Usuario u ON c.id_usuario = u.id_usuario
+    ORDER BY c.fecha_cotizacion DESC
+  `;
+  conexion.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ mensaje: 'Error al listar cotizaciones' });
+    res.json(results);
+  });
+});
+
+// Obtener detalles
+router.get('/cotizaciones/:id/detalles', isAuthenticated, isAdmin, (req, res) => {
+  const id = req.params.id;
+
+  const sql = `
+    SELECT d.id_detalle, d.id_cotizacion, d.id_producto, d.cantidad,
+           d.precio_unitario, d.subtotal,
+           p.nombre_producto, p.ruta_imagen
+    FROM DetalleCotizacion d
+    JOIN Productos p ON d.id_producto = p.id_producto
+    WHERE d.id_cotizacion = ?
+  `;
+  conexion.query(sql, [id], (err, results) => {
+    if (err) return res.status(500).json({ mensaje: 'Error al obtener detalles' });
+    res.json(results);
+  });
+});
+
+// Actualizar detalles (precio_unitario + subtotal)
+router.post('/cotizaciones/:id/detalles/update', isAuthenticated, isAdmin, (req, res) => {
+  const detalles = req.body;
+  const idCot = req.params.id;
+
+  if (!Array.isArray(detalles) || detalles.length === 0) {
+    return res.status(400).json({ mensaje: 'No hay detalles para actualizar' });
+  }
+
+  conexion.getConnection((err, conn) => {
+    if (err) return res.status(500).json({ mensaje: 'Error de conexión' });
+
+    conn.beginTransaction(async txErr => {
+      if (txErr) return res.status(500).json({ mensaje: 'Error iniciando transacción' });
+
+      try {
+        for (const d of detalles) {
+          const precio = d.precio_unitario == null ? null : Number(d.precio_unitario);
+          const subtotal = d.subtotal == null ? null : Number(d.subtotal);
+
+          await new Promise((resolve, reject) => {
+            conn.query(
+              `UPDATE DetalleCotizacion SET precio_unitario=?, subtotal=? 
+               WHERE id_detalle=? AND id_cotizacion=?`,
+              [precio, subtotal, d.id_detalle, idCot],
+              (e) => e ? reject(e) : resolve()
+            );
+          });
+        }
+
+        // Calcular total y actualizar la cotización
+        await new Promise((resolve, reject) => {
+          conn.query(
+            `UPDATE Cotizaciones
+             SET total = (SELECT SUM(subtotal) FROM DetalleCotizacion WHERE id_cotizacion = ?)
+             WHERE id_cotizacion = ?`,
+            [idCot, idCot],
+            (e) => e ? reject(e) : resolve()
+          );
+        });
+
+        conn.commit(() => {
+          conn.release();
+          res.json({ mensaje: 'Detalles actualizados correctamente' });
+        });
+
+      } catch (err2) {
+        conn.rollback(() => conn.release());
+        res.status(500).json({ mensaje: 'Error en actualización' });
+      }
+    });
+  });
+});
+
+// Marcar cotización como Devuelta
+router.post('/cotizaciones/:id/mark-returned', isAuthenticated, isAdmin, (req, res) => {
+  conexion.query(
+    `UPDATE Cotizaciones SET estado_cotizacion='Devuelta' WHERE id_cotizacion=?`,
+    [req.params.id],
+    err => {
+      if (err) return res.status(500).json({ mensaje: 'Error al actualizar estado' });
+      res.json({ mensaje: 'Cotización marcada como Devuelta' });
+    }
+  );
+});
+
+
 // --- Panel de administración ---
 router.get('/panel/:archivo', isAuthenticated, isAdmin, (req, res) => {
-  const archivosPermitidos = ['admin-users.html', 'admin-products.html', 'admin-suppliers.html', 'admin-categories.html'];
+  const archivosPermitidos = ['admin-users.html', 'admin-products.html', 'admin-suppliers.html', 'admin-categories.html', 'admin-quotes.html'];
   const archivo = req.params.archivo;
 
   if (!archivosPermitidos.includes(archivo)) {

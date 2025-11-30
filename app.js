@@ -144,7 +144,8 @@ app.get('/api/quotes', isAuthenticated, (req, res) => {
     SELECT 
       id_cotizacion, 
       fecha_cotizacion, 
-      estado_cotizacion 
+      estado_cotizacion,
+      total 
     FROM Cotizaciones 
     WHERE id_usuario = ? 
     ORDER BY fecha_cotizacion DESC

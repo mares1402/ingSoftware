@@ -208,6 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (section === 'admin-suppliers.html') loadProveedores();
           if (section === 'admin-categories.html') loadCategorias(); 
           if (section === 'client-quotes.html') loadClientQuotes();
+          if (section === 'admin-quotes.html') loadCotizaciones();
 
           // Configurar listener para el input de Excel
           setupFileInputListener('excelProductos', 'excel-productos-filename');
@@ -246,6 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <li><a href="#" class="nav-link" data-section="admin-products.html"><i class="fa-solid fa-box-archive"></i> Productos</a></li>
           <li><a href="#" class="nav-link" data-section="admin-suppliers.html"><i class="fa-solid fa-dolly"></i> Proveedores</a></li>
           <li><a href="#" class="nav-link" data-section="admin-categories.html"><i class="fa-solid fa-tags"></i> Categorías</a></li>
+          <li><a href="#" class="nav-link" data-section="admin-quotes.html"><i class="fa-solid fa-tags"></i> Cotizaciones</a></li>
         </ul>
       `;
     } else {
@@ -380,6 +382,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <td>#${String(q.id_cotizacion).padStart(6, '0')}</td>
               <td>${fecha}</td>
               <td><span class="status-badge status-${q.estado_cotizacion.toLowerCase()}">${q.estado_cotizacion}</span></td>
+              <td>$${q.total == null ? '—' : Number(q.total).toFixed(2)}</td>
             </tr>
           `;
         }).join('');
@@ -1292,6 +1295,174 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error al subir Excel de categorías:', err);
     }
   }
+
+  async function loadCotizaciones() {
+  try {
+    const res = await fetch('/api/admin/cotizaciones', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error('No se pudieron obtener las cotizaciones');
+    const cotizaciones = await res.json();
+
+    const tbody = document.querySelector('#quotesTable tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = cotizaciones.map(c => {
+      return `
+        <tr>
+          <td>${c.id_cotizacion}</td>
+          <td>${c.correo_usuario}</td>
+          <td>${new Date(c.fecha_cotizacion).toLocaleString()}</td>
+          <td>${c.estado_cotizacion}</td>
+          <td>$${c.total == null ? '—' : Number(c.total).toFixed(2)}</td>
+          <td>
+            <button class="btn-edit-quote" data-id="${c.id_cotizacion}">
+              <i class="fa-solid fa-pen"></i> Editar
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.onclick = (e) => {
+      const btn = e.target.closest('.btn-edit-quote');
+      if (btn) openEditQuoteModal(btn.dataset.id);
+    };
+
+  } catch (err) {
+    console.error(err);
+    mostrarNotificacion('Error al cargar cotizaciones: ' + err.message, 'error');
+  }
+}
+
+// ---- Abrir modal y cargar detalles ----
+async function openEditQuoteModal(id) {
+  try {
+    // Mostrar modal
+    const modal = document.getElementById('modal-editar-cotizacion');
+    setupModalCloseListeners(modal);
+    modal.style.display = 'flex';
+    document.getElementById('cot-id-label').textContent = `#${id}`;
+
+    // Obtener detalles
+    const res = await fetch(`/api/admin/cotizaciones/${id}/detalles`, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error('No se pudieron obtener los detalles');
+    const detalles = await res.json();
+
+    const tbody = document.querySelector('#cotdetalleTable tbody');
+    tbody.innerHTML = detalles.map(d => `
+      <tr data-id-detalle="${d.id_detalle}">
+        <td style="display:flex;align-items:center;gap:8px;">
+          ${d.ruta_imagen ? `<img src="${d.ruta_imagen}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">` : ''}
+          <span>${d.nombre_producto}</span>
+        </td>
+        <td>${d.cantidad}</td>
+        <td>
+          <input type="number" step="0.01" class="input-precio"
+            value="${d.precio_unitario == null ? '' : Number(d.precio_unitario).toFixed(2)}"
+            style="width:120px;padding:6px;border:1px solid #ccc;border-radius:6px;" />
+        </td>
+        <td class="td-subtotal">
+          ${d.subtotal == null ? '-' : Number(d.subtotal).toFixed(2)}
+        </td>
+      </tr>
+    `).join('');
+
+    /* ====== LISTENERS PARA RECÁLCULO DINÁMICO ====== */
+    tbody.querySelectorAll('.input-precio').forEach(input => {
+      input.addEventListener('input', e => {
+        const tr = e.target.closest('tr');
+        const cantidad = Number(tr.cells[1].textContent);
+        const precio = parseFloat(e.target.value);
+        const tdSubtotal = tr.querySelector('.td-subtotal');
+
+        if (!isNaN(precio)) {
+          const subtotal = cantidad * precio;
+          tdSubtotal.textContent = subtotal.toFixed(2);
+        } else {
+          tdSubtotal.textContent = '-';
+        }
+
+        recalcTotal();
+      });
+    });
+
+    recalcTotal();
+
+    /* ====== GUARDAR ====== */
+    document.getElementById('btn-save-cot').onclick = async () => {
+      const rows = tbody.querySelectorAll('tr');
+      const payload = [];
+
+      rows.forEach(tr => {
+        const id_detalle = Number(tr.dataset.idDetalle);
+        const precio = tr.querySelector('.input-precio').value.trim();
+        const subtotalText = tr.querySelector('.td-subtotal').textContent.trim();
+
+        payload.push({
+          id_detalle,
+          precio_unitario: precio === '' ? null : parseFloat(precio),
+          subtotal: subtotalText === '-' ? null : parseFloat(subtotalText)
+        });
+      });
+
+      try {
+        const r = await fetch(`/api/admin/cotizaciones/${id}/detalles/update`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await r.json();
+        if (r.ok) {
+          mostrarNotificacion(result.mensaje || 'Detalles guardados', 'exito');
+          modal.style.display = 'none';
+          loadCotizaciones();
+        } else {
+          mostrarNotificacion(result.mensaje || 'Error al guardar', 'error');
+        }
+      } catch (err) {
+        mostrarNotificacion('Error al guardar: ' + err.message, 'error');
+      }
+    };
+
+    /* ====== MARCAR COMO DEVUELTA ====== */
+    document.getElementById('btn-mark-returned').onclick = async () => {
+      try {
+        const r = await fetch(`/api/admin/cotizaciones/${id}/mark-returned`, {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+
+        const result = await r.json();
+        if (r.ok) {
+          mostrarNotificacion(result.mensaje, 'exito');
+          modal.style.display = 'none';
+          loadCotizaciones();
+        } else {
+          mostrarNotificacion(result.mensaje, 'error');
+        }
+      } catch (err) {
+        mostrarNotificacion('Error marcando como devuelta', 'error');
+      }
+    };
+
+  } catch (err) {
+    mostrarNotificacion('Error cargando cotización', 'error');
+  }
+}
+
+function recalcTotal() {
+  let total = 0;
+  document.querySelectorAll('#cotdetalleTable tbody tr').forEach(tr => {
+    const txt = tr.querySelector('.td-subtotal').textContent.trim();
+    const val = parseFloat(txt);
+    if (!isNaN(val)) total += val;
+  });
+
+  document.getElementById('cot-total').textContent = total.toFixed(2);
+}
+
+
 
     // --- Delegación de eventos para botones dinámicos ---
     // Esto asegura que los botones funcionen incluso si se recargan con el contenido.
