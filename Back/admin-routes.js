@@ -373,7 +373,7 @@ module.exports = (uploadProductImage) => { // Envuelve las rutas en una función
                       });
                     }
                     conn.release();
-                    res.status(201).json({ mensaje: 'Producto agregado correctamente', id: id_producto });
+                    res.status(201).json({ mensaje: 'Se agregó el producto', id: id_producto });
                   });
                 }
               );

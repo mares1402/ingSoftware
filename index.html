@@ -271,18 +271,15 @@
                                 if (existingProduct) {
                                     // Si el producto ya está en el carrito, incrementa la cantidad
                                     existingProduct.quantity++;
+                                    showToastNotification('Cantidad actualizada en el carrito.', 'success');
                                 } else {
                                     // Si es un producto nuevo, lo añade con cantidad 1
                                     cart.push({ productId: productId, quantity: 1 });
+                                    showToastNotification('Producto añadido al carrito.', 'success');
                                 }
 
                                 updateCart(); // Actualizar contador y localStorage
-                                // El mensaje ahora es más útil
-                                // Si el panel ya está abierto, lo volvemos a renderizar para que se vea el cambio.
-                                if (cartPanel.classList.contains('active')) {
-                                    renderCartPanel();
-                                }
-                                showToastNotification('Cantidad actualizada en el carrito.', 'success');
+                                renderCartPanel(); // Actualizar el panel del carrito para reflejar el cambio en ambos casos.
                             }
                         }
                     });

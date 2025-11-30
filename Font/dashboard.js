@@ -1203,7 +1203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const result = await res.json();
         if (res.ok) {
-          mostrarNotificacion('Producto agregado correctamente.', 'exito');
+          mostrarNotificacion('Se agregó el producto.', 'exito');
           modal.style.display = 'none';
           form.reset(); // Limpiar el formulario para la próxima vez
           loadProductos();
