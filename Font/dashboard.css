@@ -222,6 +222,19 @@ hr { border:0; border-top:1px solid #eee; }
   color: var(--text);
 }
 .modal-actions .btn-cancel:hover { background-color: #e2e6ea; }
+/* Botón de éxito (verde) para acciones positivas dentro de modales */
+.modal-actions .btn-success {
+  background-color: #28a745;
+  color: white;
+}
+.modal-actions .btn-success:hover { background-color: #218838; transform: translateY(-1px); }
+
+/* Total dentro del modal de cotización */
+.modal .modal-total {
+  margin-top: 1rem;
+  text-align: right;
+  font-weight: 600;
+}
 /* === Estilos para Modales === */
 .modal {
   position: fixed;

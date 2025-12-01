@@ -798,10 +798,16 @@ body[data-user-type="2"] .cart-button {
 }
 
 .btn-edit-quote {
-    background-color: #ffc107; /* Amarillo para editar */
-    color: #212529;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    margin-left: 4px;
+    transition: all 0.2s ease;
+    color: var(--muted);
 }
-.btn-edit-quote:hover { background-color: #e0a800; }
+.btn-edit-quote:hover { background-color: #e9f2ff; border-color: #c7dfff; color: var(--accent); }
 
 .btn-download-pdf {
     background-color: #dc3545; /* Rojo para PDF */

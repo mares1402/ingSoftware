@@ -1,5 +1,9 @@
+
+
 <div class="panel-header">
-  <h3>Cotizaciones</h3>
+  <div class="panel-actions">
+    <input type="search" placeholder="Buscar por ID o cliente..." class="panel-search" aria-label="Buscar cotizaciones">
+  </div>
 </div>
 
 <div class="panel-content">
@@ -23,11 +27,10 @@
   <div class="modal-overlay"></div>
   <div class="modal-content">
     <div class="modal-header">
-      <h2>Editar Cotización <span id="cot-id-label"></span></h2>
+      <h2>Detalle de Cotización <span id="cot-id-label"></span></h2>
       <button class="modal-close-btn">&times;</button>
     </div>
     <div class="modal-body">
-      <div id="cotizacion-info"></div>
       <table id="cotdetalleTable" class="admin-table">
         <thead>
           <tr>
@@ -40,13 +43,13 @@
         <tbody></tbody>
       </table>
 
-      <div style="margin-top:1rem; text-align:right;">
+      <div class="modal-total">
         <strong>Total: $<span id="cot-total">0.00</span></strong>
       </div>
 
-      <div class="modal-actions" style="margin-top:1rem;">
-        <button id="btn-save-cot" class="btn-confirm">Guardar precios</button>
-        <button id="btn-mark-returned" class="btn-confirm" style="background:#28a745;">Marcar como Devuelta</button>
+      <div class="modal-actions">
+        <button id="btn-save-cot" class="btn-submit">Guardar precios</button>
+        <button id="btn-mark-returned" class="btn-submit btn-success">Marcar como Devuelta</button>
       </div>
     </div>
   </div>

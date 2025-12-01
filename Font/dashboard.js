@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <li><a href="#" class="nav-link" data-section="admin-products.html"><i class="fa-solid fa-box-archive"></i> Productos</a></li>
           <li><a href="#" class="nav-link" data-section="admin-suppliers.html"><i class="fa-solid fa-dolly"></i> Proveedores</a></li>
           <li><a href="#" class="nav-link" data-section="admin-categories.html"><i class="fa-solid fa-tags"></i> Categorías</a></li>
-          <li><a href="#" class="nav-link" data-section="admin-quotes.html"><i class="fa-solid fa-tags"></i> Cotizaciones</a></li>
+          <li><a href="#" class="nav-link" data-section="admin-quotes.html"><i class="fa-solid fa-file-invoice-dollar"></i> Cotizaciones</a></li>
         </ul>
       `;
     } else {
@@ -1314,9 +1314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <td>${c.estado_cotizacion}</td>
           <td>$${c.total == null ? '—' : Number(c.total).toFixed(2)}</td>
           <td>
-            <button class="btn-edit-quote" data-id="${c.id_cotizacion}">
-              <i class="fa-solid fa-pen"></i> Editar
-            </button>
+            <button class="btn-edit-quote" data-id="${c.id_cotizacion}"><i class="fa-solid fa-pen"></i></button>
           </td>
         </tr>
       `;
