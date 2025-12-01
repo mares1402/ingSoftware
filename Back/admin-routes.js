@@ -1102,6 +1102,220 @@ router.post('/cotizaciones/:id/mark-returned', isAuthenticated, isAdmin, (req, r
   );
 });
 
+// Eliminar detalle de cotización
+router.delete('/cotizaciones/:id/detalles/:idDetalle', isAuthenticated, isAdmin, (req, res) => {
+  const { id, idDetalle } = req.params;
+  
+  conexion.query(
+    `DELETE FROM DetalleCotizacion WHERE id_detalle = ? AND id_cotizacion = ?`,
+    [idDetalle, id],
+    (err) => {
+      if (err) return res.status(500).json({ mensaje: 'Error al eliminar detalle' });
+      
+      // Recalcular total
+      conexion.query(
+        `UPDATE Cotizaciones SET total = (SELECT SUM(cantidad * COALESCE(precio_unitario, 0)) FROM DetalleCotizacion WHERE id_cotizacion = ?) WHERE id_cotizacion = ?`,
+        [id, id],
+        (err2) => {
+          if (err2) return res.status(500).json({ mensaje: 'Error al recalcular total' });
+          res.json({ mensaje: 'Detalle eliminado' });
+        }
+      );
+    }
+  );
+});
+
+// Actualizar cantidades de detalles
+router.post('/cotizaciones/:id/cantidades/update', isAuthenticated, isAdmin, (req, res) => {
+  const detalles = req.body;
+  const idCot = req.params.id;
+
+  if (!Array.isArray(detalles) || detalles.length === 0) {
+    return res.status(400).json({ mensaje: 'No hay detalles para actualizar' });
+  }
+
+  conexion.getConnection((err, conn) => {
+    if (err) return res.status(500).json({ mensaje: 'Error de conexión' });
+
+    conn.beginTransaction(async txErr => {
+      if (txErr) return res.status(500).json({ mensaje: 'Error iniciando transacción' });
+
+      try {
+        for (const d of detalles) {
+          const cantidad = d.cantidad || 1;
+
+          await new Promise((resolve, reject) => {
+            conn.query(
+              `UPDATE DetalleCotizacion SET cantidad = ? WHERE id_detalle = ? AND id_cotizacion = ?`,
+              [cantidad, d.id_detalle, idCot],
+              (e) => e ? reject(e) : resolve()
+            );
+          });
+        }
+
+        // Recalcular total
+        await new Promise((resolve, reject) => {
+          conn.query(
+            `UPDATE Cotizaciones SET total = (SELECT SUM(cantidad * COALESCE(precio_unitario, 0)) FROM DetalleCotizacion WHERE id_cotizacion = ?) WHERE id_cotizacion = ?`,
+            [idCot, idCot],
+            (e) => e ? reject(e) : resolve()
+          );
+        });
+
+        conn.commit(() => {
+          conn.release();
+          res.json({ mensaje: 'Cantidades actualizadas' });
+        });
+
+      } catch (err2) {
+        conn.rollback(() => conn.release());
+        res.status(500).json({ mensaje: 'Error en actualización' });
+      }
+    });
+  });
+});
+
+// Agregar producto a cotización
+router.post('/cotizaciones/:id/productos/add', isAuthenticated, isAdmin, (req, res) => {
+  const { id_producto, cantidad } = req.body;
+  const idCot = req.params.id;
+
+  if (!id_producto || !cantidad) {
+    return res.status(400).json({ mensaje: 'Datos incompletos' });
+  }
+
+  // Verificar si el producto ya existe en la cotización
+  conexion.query(
+    `SELECT id_detalle FROM DetalleCotizacion WHERE id_cotizacion = ? AND id_producto = ?`,
+    [idCot, id_producto],
+    (err, results) => {
+      if (err) return res.status(500).json({ mensaje: 'Error verificando producto' });
+
+      if (results.length > 0) {
+        // Si existe, actualizar cantidad
+        conexion.query(
+          `UPDATE DetalleCotizacion SET cantidad = cantidad + ? WHERE id_detalle = ?`,
+          [cantidad, results[0].id_detalle],
+          (err2) => {
+            if (err2) return res.status(500).json({ mensaje: 'Error actualizando cantidad' });
+            res.json({ mensaje: 'Cantidad actualizada' });
+          }
+        );
+      } else {
+        // Si no existe, insertar nuevo detalle
+        conexion.query(
+          `INSERT INTO DetalleCotizacion (id_cotizacion, id_producto, cantidad) VALUES (?, ?, ?)`,
+          [idCot, id_producto, cantidad],
+          (err3) => {
+            if (err3) return res.status(500).json({ mensaje: 'Error al agregar producto' });
+            res.json({ mensaje: 'Producto agregado' });
+          }
+        );
+      }
+    }
+  );
+});
+
+
+// --- COTIZACIONES PARA CLIENTES ---
+  // Obtener cotizaciones del cliente autenticado
+  router.get('/quotes', isAuthenticated, (req, res) => {
+    const userId = req.session.user.id_usuario;
+    conexion.query(
+      'SELECT id_cotizacion, fecha_cotizacion, estado FROM Cotizaciones WHERE id_usuario = ? ORDER BY fecha_cotizacion DESC',
+      [userId],
+      (err, results) => {
+        if (err) return res.status(500).json({ mensaje: 'Error al obtener cotizaciones', error: err });
+        // Mapear 'estado' a 'estado_cotizacion' y calcular total
+        const formattedResults = results.map(q => ({
+          id_cotizacion: q.id_cotizacion,
+          fecha_cotizacion: q.fecha_cotizacion,
+          estado_cotizacion: q.estado,
+          total: q.total
+        }));
+        res.json(formattedResults);
+      }
+    );
+  });
+
+  // Obtener detalles de una cotización del cliente
+  router.get('/quotes/:id', isAuthenticated, (req, res) => {
+    const cotId = req.params.id;
+    const userId = req.session.user.id_usuario;
+    
+    conexion.query(
+      `SELECT dc.id_detalle_cotizacion, p.id_producto, p.nombre_producto, dc.cantidad, dc.precio_unitario, (dc.cantidad * dc.precio_unitario) as subtotal
+       FROM DetalleCotizacion dc
+       JOIN Productos p ON dc.id_producto = p.id_producto
+       JOIN Cotizaciones c ON dc.id_cotizacion = c.id_cotizacion
+       WHERE dc.id_cotizacion = ? AND c.id_usuario = ?`,
+      [cotId, userId],
+      (err, results) => {
+        if (err) return res.status(500).json({ mensaje: 'Error al obtener detalles', error: err });
+        res.json(results);
+      }
+    );
+  });
+
+  // Actualizar cantidades y eliminar artículos en cotización del cliente
+  router.put('/quotes/:id/update', isAuthenticated, async (req, res) => {
+    const cotId = req.params.id;
+    const userId = req.session.user.id_usuario;
+    const { updates = [], deletes = [] } = req.body;
+
+    try {
+      // Verificar que la cotización pertenece al usuario
+      const [quote] = await new Promise((resolve, reject) => {
+        conexion.query(
+          'SELECT id_cotizacion FROM Cotizaciones WHERE id_cotizacion = ? AND id_usuario = ?',
+          [cotId, userId],
+          (err, results) => {
+            if (err) reject(err);
+            resolve(results);
+          }
+        );
+      });
+
+      if (!quote) {
+        return res.status(403).json({ mensaje: 'No tienes permiso para editar esta cotización' });
+      }
+
+      // Eliminar detalles
+      if (deletes.length > 0) {
+        const placeholders = deletes.map(() => '?').join(',');
+        await new Promise((resolve, reject) => {
+          conexion.query(
+            `DELETE FROM DetalleCotizacion WHERE id_detalle_cotizacion IN (${placeholders})`,
+            deletes,
+            (err) => {
+              if (err) reject(err);
+              resolve();
+            }
+          );
+        });
+      }
+
+      // Actualizar cantidades
+      if (updates.length > 0) {
+        for (const update of updates) {
+          await new Promise((resolve, reject) => {
+            conexion.query(
+              'UPDATE DetalleCotizacion SET cantidad = ? WHERE id_detalle_cotizacion = ?',
+              [update.cantidad, update.id],
+              (err) => {
+                if (err) reject(err);
+                resolve();
+              }
+            );
+          });
+        }
+      }
+
+      res.json({ mensaje: 'Cotización actualizada correctamente' });
+    } catch (err) {
+      res.status(500).json({ mensaje: 'Error al actualizar cotización', error: err.message });
+    }
+  });
 
 // --- Panel de administración ---
 router.get('/panel/:archivo', isAuthenticated, isAdmin, (req, res) => {

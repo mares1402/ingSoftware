@@ -374,18 +374,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         tbody.innerHTML = quotes.map(q => {
-          const fecha = new Date(q.fecha_cotizacion).toLocaleDateString('es-MX', {
-            year: 'numeric', month: 'long', day: 'numeric'
-          });
+          // Formatear la fecha para asegurar consistencia
+          const fecha = new Date(q.fecha_cotizacion).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+          const estadoClass = (q.estado_cotizacion || 'pendiente').toLowerCase().replace(/\s+/g, '-');
+          const totalFormateado = q.total != null ? `$${Number(q.total).toFixed(2)}` : '—';
+
           return `
             <tr>
               <td>#${String(q.id_cotizacion).padStart(6, '0')}</td>
               <td>${fecha}</td>
-              <td><span class="status-badge status-${q.estado_cotizacion.toLowerCase()}">${q.estado_cotizacion}</span></td>
-              <td>$${q.total == null ? '—' : Number(q.total).toFixed(2)}</td>
+              <td><span class="status-badge status-${estadoClass}">${q.estado_cotizacion}</span></td>
+              <td>${totalFormateado}</td>
+              <td>
+                <button class="btn-edit-quote" data-id="${q.id_cotizacion}" title="Ver Detalles"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-download-pdf" data-id="${q.id_cotizacion}" title="Descargar PDF"><i class="fa-solid fa-file-pdf"></i></button>
+              </td>
             </tr>
           `;
         }).join('');
+
+        // Delegación de eventos para los botones de la tabla de cotizaciones del cliente
+        tbody.onclick = (e) => {
+          const editBtn = e.target.closest('.btn-edit-quote');
+          if (editBtn) openClientQuoteModal(editBtn.dataset.id);
+          // Aquí se puede añadir la lógica para el botón de descarga en el futuro
+        };
       } catch (err) {
         mostrarNotificacion('Error cargando cotizaciones: ' + err.message, 'error');
       }
@@ -1336,9 +1349,13 @@ async function openEditQuoteModal(id) {
   try {
     // Mostrar modal
     const modal = document.getElementById('modal-editar-cotizacion');
+    if (!modal) throw new Error('Modal no encontrado');
+    
     setupModalCloseListeners(modal);
     modal.style.display = 'flex';
-    document.getElementById('cot-id-label').textContent = `#${id}`;
+    
+    const idLabel = document.getElementById('cot-id-label');
+    if (idLabel) idLabel.textContent = `#${id}`;
 
     // Obtener detalles
     const res = await fetch(`/api/admin/cotizaciones/${id}/detalles`, { credentials: 'same-origin' });
@@ -1346,6 +1363,8 @@ async function openEditQuoteModal(id) {
     const detalles = await res.json();
 
     const tbody = document.querySelector('#cotdetalleTable tbody');
+    if (!tbody) throw new Error('Tabla de detalles no encontrada');
+    
     tbody.innerHTML = detalles.map(d => `
       <tr data-id-detalle="${d.id_detalle}">
         <td style="display:flex;align-items:center;gap:8px;">
@@ -1368,15 +1387,19 @@ async function openEditQuoteModal(id) {
     tbody.querySelectorAll('.input-precio').forEach(input => {
       input.addEventListener('input', e => {
         const tr = e.target.closest('tr');
+        if (!tr || !tr.cells[1]) return;
+        
         const cantidad = Number(tr.cells[1].textContent);
         const precio = parseFloat(e.target.value);
         const tdSubtotal = tr.querySelector('.td-subtotal');
 
-        if (!isNaN(precio)) {
-          const subtotal = cantidad * precio;
-          tdSubtotal.textContent = subtotal.toFixed(2);
-        } else {
-          tdSubtotal.textContent = '-';
+        if (tdSubtotal) {
+          if (!isNaN(precio) && !isNaN(cantidad)) {
+            const subtotal = cantidad * precio;
+            tdSubtotal.textContent = subtotal.toFixed(2);
+          } else {
+            tdSubtotal.textContent = '-';
+          }
         }
 
         recalcTotal();
@@ -1386,80 +1409,203 @@ async function openEditQuoteModal(id) {
     recalcTotal();
 
     /* ====== GUARDAR ====== */
-    document.getElementById('btn-save-cot').onclick = async () => {
-      const rows = tbody.querySelectorAll('tr');
-      const payload = [];
+    const btnSave = document.getElementById('btn-save-cot');
+    if (btnSave) {
+      btnSave.onclick = async () => {
+        const rows = tbody.querySelectorAll('tr');
+        const payload = [];
 
-      rows.forEach(tr => {
-        const id_detalle = Number(tr.dataset.idDetalle);
-        const precio = tr.querySelector('.input-precio').value.trim();
-        const subtotalText = tr.querySelector('.td-subtotal').textContent.trim();
+        rows.forEach(tr => {
+          const id_detalle = Number(tr.dataset.idDetalle);
+          const precioInput = tr.querySelector('.input-precio');
+          const subtotalCell = tr.querySelector('.td-subtotal');
+          
+          if (precioInput && subtotalCell) {
+            const precio = precioInput.value.trim();
+            const subtotalText = subtotalCell.textContent.trim();
 
-        payload.push({
-          id_detalle,
-          precio_unitario: precio === '' ? null : parseFloat(precio),
-          subtotal: subtotalText === '-' ? null : parseFloat(subtotalText)
+            payload.push({
+              id_detalle,
+              precio_unitario: precio === '' ? null : parseFloat(precio),
+              subtotal: subtotalText === '-' ? null : parseFloat(subtotalText)
+            });
+          }
         });
-      });
 
-      try {
-        const r = await fetch(`/api/admin/cotizaciones/${id}/detalles/update`, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+        try {
+          const r = await fetch(`/api/admin/cotizaciones/${id}/detalles/update`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
 
-        const result = await r.json();
-        if (r.ok) {
-          mostrarNotificacion(result.mensaje || 'Detalles guardados', 'exito');
-          modal.style.display = 'none';
-          loadCotizaciones();
-        } else {
-          mostrarNotificacion(result.mensaje || 'Error al guardar', 'error');
+          const result = await r.json();
+          if (r.ok) {
+            mostrarNotificacion(result.mensaje || 'Detalles guardados', 'exito');
+            modal.style.display = 'none';
+            loadCotizaciones();
+          } else {
+            mostrarNotificacion(result.mensaje || 'Error al guardar', 'error');
+          }
+        } catch (err) {
+          mostrarNotificacion('Error al guardar: ' + err.message, 'error');
         }
-      } catch (err) {
-        mostrarNotificacion('Error al guardar: ' + err.message, 'error');
-      }
-    };
+      };
+    }
 
     /* ====== MARCAR COMO DEVUELTA ====== */
-    document.getElementById('btn-mark-returned').onclick = async () => {
-      try {
-        const r = await fetch(`/api/admin/cotizaciones/${id}/mark-returned`, {
-          method: 'POST',
-          credentials: 'same-origin'
-        });
+    const btnMarkReturned = document.getElementById('btn-mark-returned');
+    if (btnMarkReturned) {
+      btnMarkReturned.onclick = async () => {
+        try {
+          const r = await fetch(`/api/admin/cotizaciones/${id}/mark-returned`, {
+            method: 'POST',
+            credentials: 'same-origin'
+          });
 
-        const result = await r.json();
-        if (r.ok) {
-          mostrarNotificacion(result.mensaje, 'exito');
-          modal.style.display = 'none';
-          loadCotizaciones();
-        } else {
-          mostrarNotificacion(result.mensaje, 'error');
+          const result = await r.json();
+          if (r.ok) {
+            mostrarNotificacion(result.mensaje, 'exito');
+            modal.style.display = 'none';
+            loadCotizaciones();
+          } else {
+            mostrarNotificacion(result.mensaje, 'error');
+          }
+        } catch (err) {
+          mostrarNotificacion('Error marcando como devuelta', 'error');
         }
-      } catch (err) {
-        mostrarNotificacion('Error marcando como devuelta', 'error');
-      }
-    };
+      };
+    }
 
   } catch (err) {
-    mostrarNotificacion('Error cargando cotización', 'error');
+    mostrarNotificacion('Error cargando cotización: ' + err.message, 'error');
+    console.error(err);
   }
 }
 
 function recalcTotal() {
   let total = 0;
-  document.querySelectorAll('#cotdetalleTable tbody tr').forEach(tr => {
-    const txt = tr.querySelector('.td-subtotal').textContent.trim();
-    const val = parseFloat(txt);
-    if (!isNaN(val)) total += val;
+  const rows = document.querySelectorAll('#cotdetalleTable tbody tr');
+  rows.forEach(tr => {
+    const subtotalCell = tr.querySelector('.td-subtotal');
+    if (subtotalCell) {
+      const txt = subtotalCell.textContent.trim();
+      const val = parseFloat(txt);
+      if (!isNaN(val)) total += val;
+    }
   });
 
-  document.getElementById('cot-total').textContent = total.toFixed(2);
+  const totalSpan = document.getElementById('cot-total');
+  if (totalSpan) totalSpan.textContent = total.toFixed(2);
 }
 
+// --- Recalcular total para el modal de edición del cliente ---
+function recalcClientQuoteTotal() {
+  let total = 0;
+  const modal = document.getElementById('modal-editar-cotizacion-cliente');
+  if (!modal) return;
+
+  modal.querySelectorAll('#clientCotdetalleTable tbody tr').forEach(tr => {
+    const priceText = tr.querySelector('td:nth-child(3)').textContent.replace('$', '').trim();
+    const quantityInput = tr.querySelector('.input-quantity-quote');
+    
+    if (!isNaN(parseFloat(priceText)) && quantityInput && quantityInput.value > 0) {
+      const subtotal = parseFloat(priceText) * parseInt(quantityInput.value, 10);
+      total += subtotal;
+    }
+  });
+  
+  const totalElement = modal.querySelector('#client-cot-total');
+  if (totalElement) totalElement.textContent = total.toFixed(2);
+}
+
+// --- Abrir modal para ver detalles de cotización del cliente ---
+async function openClientQuoteModal(id) {
+  try {
+    const modal = document.getElementById('modal-editar-cotizacion-cliente');
+    if (!modal) throw new Error('Modal no encontrado');
+    
+    const tbody = modal.querySelector('#clientCotdetalleTable tbody');
+    if (!tbody) throw new Error('Tabla del modal no encontrada');
+
+    // Configurar botones de cierre
+    const btnCancel = modal.querySelector('#btn-cancel-client-cot');
+    if (btnCancel) btnCancel.onclick = () => modal.style.display = 'none';
+    setupModalCloseListeners(modal);
+    
+    // Mostrar modal y preparar
+    modal.style.display = 'flex';
+    modal.querySelector('#client-cot-id-label').textContent = `#${String(id).padStart(6, '0')}`;
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Cargando...</td></tr>';
+    
+    // Array para rastrear eliminados
+    let deletedDetails = [];
+
+    // Obtener detalles
+    const res = await fetch(`/api/quotes/${id}`, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error('No se pudieron obtener los detalles de la cotización.');
+    const details = await res.json();
+
+    if (!details || details.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Esta cotización no tiene productos.</td></tr>';
+    } else {
+      tbody.innerHTML = details.map(d => `
+        <tr data-id-detalle="${d.id_detalle_cotizacion}">
+          <td>${d.nombre_producto}</td>
+          <td><input type="number" class="input-quantity-quote" value="${d.cantidad}" min="1" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 6px;"></td>
+          <td>$${Number(d.precio_unitario).toFixed(2)}</td>
+          <td><button class="btn-delete-item-quote" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>
+      `).join('');
+    }
+
+    recalcClientQuoteTotal();
+
+    // Eventos
+    tbody.onclick = (e) => {
+      const deleteBtn = e.target.closest('.btn-delete-item-quote');
+      if (deleteBtn) {
+        const row = deleteBtn.closest('tr');
+        deletedDetails.push(row.dataset.idDetalle);
+        row.remove();
+        recalcClientQuoteTotal();
+      }
+    };
+
+    tbody.oninput = () => recalcClientQuoteTotal();
+
+    // Guardar cambios
+    modal.querySelector('#btn-save-client-cot').onclick = async () => {
+      const updates = [];
+      tbody.querySelectorAll('tr').forEach(row => {
+        updates.push({
+          id: row.dataset.idDetalle,
+          cantidad: row.querySelector('.input-quantity-quote').value
+        });
+      });
+
+      try {
+        const saveRes = await fetch(`/api/quotes/${id}/update`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates, deletes: deletedDetails }),
+          credentials: 'same-origin'
+        });
+        if (!saveRes.ok) throw new Error('Error al guardar');
+        
+        mostrarNotificacion('Cambios guardados.', 'exito');
+        modal.style.display = 'none';
+        loadClientQuotes();
+      } catch (err) {
+        mostrarNotificacion(err.message, 'error');
+      }
+    };
+
+  } catch (err) {
+    mostrarNotificacion(err.message, 'error');
+  }
+}
 
 
     // --- Delegación de eventos para botones dinámicos ---
