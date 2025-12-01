@@ -6,42 +6,8 @@
         <th>Fecha</th>
         <th>Estado</th>
         <th>Total</th>
-        <th>Acciones</th>
       </tr>
     </thead>
     <tbody id="quotesTableBody"></tbody>
   </table>
-</div>
-
-<!-- Modal para editar cotización del cliente -->
-<div id="modal-editar-cotizacion-cliente" class="modal" style="display:none;">
-  <div class="modal-overlay"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>Editar Cotización <span id="client-cot-id-label"></span></h2>
-      <button class="modal-close-btn">&times;</button>
-    </div>
-    <div class="modal-body">
-      <table id="clientCotdetalleTable" class="admin-table">
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Cantidad</th>
-            <th>Precio Unitario</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <div class="modal-total">
-        <strong>Total: $<span id="client-cot-total">0.00</span></strong>
-      </div>
-
-      <div class="modal-actions">
-        <button id="btn-cancel-client-cot" class="btn-confirm btn-cancel">Cancelar</button>
-        <button id="btn-save-client-cot" class="btn-confirm">Guardar Cambios</button>
-      </div>
-    </div>
-  </div>
 </div>

@@ -1102,6 +1102,7 @@ router.post('/cotizaciones/:id/mark-returned', isAuthenticated, isAdmin, (req, r
   );
 });
 
+<<<<<<< HEAD
 // Eliminar detalle de cotización
 router.delete('/cotizaciones/:id/detalles/:idDetalle', isAuthenticated, isAdmin, (req, res) => {
   const { id, idDetalle } = req.params;
@@ -1215,6 +1216,8 @@ router.post('/cotizaciones/:id/productos/add', isAuthenticated, isAdmin, (req, r
     }
   );
 });
+=======
+>>>>>>> parent of b77b2da (diseño de editar cotizacion)
 
 // --- Panel de administración ---
 router.get('/panel/:archivo', isAuthenticated, isAdmin, (req, res) => {
