@@ -281,13 +281,11 @@ app.put('/api/quotes/:id/update', isAuthenticated, (req, res) => {
       let completed = 0;
       updates.forEach(update => {
         conexion.query(
-          // Truco: Guardamos la cantidad ANTERIOR en el campo 'subtotal'
-          // y luego actualizamos la cantidad. El subtotal real se recalculará
-          // cuando el admin guarde los precios.
           `UPDATE DetalleCotizacion 
-           SET subtotal = cantidad, cantidad = ? 
+           SET cantidad = ?, 
+               subtotal = ? * COALESCE(precio_unitario, 0) 
            WHERE id_detalle = ?`,
-          [update.cantidad, update.id],
+          [update.cantidad, update.cantidad, update.id],
           (err) => {
             if (err && !responseSent) {
               console.error('Error al actualizar:', err);

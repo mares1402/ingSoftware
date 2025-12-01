@@ -1370,47 +1370,20 @@ async function openEditQuoteModal(id) {
     if (!tbody) throw new Error('Tabla de detalles no encontrada');
     
     tbody.innerHTML = detalles.map(d => `
-      <tr data-id-detalle="${d.id_detalle}" data-cantidad-anterior="${d.subtotal}">
+      <tr data-id-detalle="${d.id_detalle}">
         <td style="display:flex;align-items:center;gap:8px;">
           ${d.ruta_imagen ? `<img src="${d.ruta_imagen}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">` : ''}
           <span>${d.nombre_producto}</span>
         </td>
         <td>
-          ${
-            // Si la cantidad actual es diferente de la anterior (guardada en subtotal), mostrar icono.
-            // Comparamos `d.cantidad` con `d.subtotal` que es donde guardamos la cantidad vieja.
-            d.subtotal != null && d.cantidad != d.subtotal
-            ? `<span class="change-indicator" title="El cliente cambió la cantidad de ${parseInt(d.subtotal, 10)} a ${d.cantidad}">
-                 <i class="fa-solid fa-triangle-exclamation"></i>
-               </span>` 
-            : ''
-          }
-          <input type="number" class="input-cantidad" value="${d.cantidad}" min="1" max="100"
-                 oninput="this.value = this.value.replace(/[^0-9]/g, ''); if (parseInt(this.value, 10) > 100) this.value = 100;"
+          <input type="number" class="input-cantidad" value="${d.cantidad}" min="1" 
+                 oninput="this.value = this.value.replace(/[^0-9]/g, '')"
                  style="width:70px;padding:6px;text-align:center;border:1px solid #ccc;border-radius:6px;" />
         </td>
         <td>
           <input type="number" step="0.01" class="input-precio"
             value="${d.precio_unitario == null ? '' : Number(d.precio_unitario).toFixed(2)}"
-            style="width:100px;padding:6px;border:1px solid #ccc;border-radius:6px;"
-            onkeydown="
-              const key = event.key;
-              const value = this.value;
-              const parts = value.split('.');
-              // Permitir teclas de control (borrar, flechas, etc.)
-              if (['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(key)) return;
-              // Prevenir segundo punto decimal
-              if (key === '.' && value.includes('.')) event.preventDefault();
-              // Prevenir más de 12 dígitos en la parte entera
-              if (parts[0].length >= 12 && !value.includes('.') && key !== '.') event.preventDefault();
-              // Prevenir más de 2 dígitos en la parte decimal
-              if (parts.length > 1 && parts[1].length >= 2) event.preventDefault();
-            "
-            onblur="
-              if (this.value) {
-                this.value = parseFloat(this.value).toFixed(2);
-              }
-            " />
+            style="width:100px;padding:6px;border:1px solid #ccc;border-radius:6px;" />
         </td>
         <td class="td-subtotal">
           ${d.subtotal == null ? '-' : Number(d.subtotal).toFixed(2)}
@@ -1561,22 +1534,6 @@ function recalcClientQuoteTotal() {
   const modal = document.getElementById('modal-editar-cotizacion-cliente');
   if (!modal) return;
 
-  // --- INYECTAR ADVERTENCIA SI NO EXISTE ---
-  // Asegurarnos de que el div de advertencia esté presente en el modal.
-  let warningDiv = modal.querySelector('.quote-change-warning');
-  if (!warningDiv) {
-    warningDiv = document.createElement('div');
-    warningDiv.className = 'quote-change-warning';
-    warningDiv.style.display = 'none'; // Oculto por defecto
-    warningDiv.innerHTML = `
-      <i class="fa-solid fa-circle-info"></i>
-      <span>Al modificar la cotización, el total cambiará y los precios unitarios podrían ser ajustados por un administrador durante la revisión.</span>
-    `;
-    // Insertarlo antes de los botones de acción
-    const modalActions = modal.querySelector('.modal-actions');
-    if (modalActions) modalActions.before(warningDiv);
-  }
-
   modal.querySelectorAll('#clientCotdetalleTable tbody tr').forEach(tr => {
     const priceText = tr.querySelector('td:nth-child(3)').textContent.replace('$', '').trim();
     const quantityInput = tr.querySelector('.input-quantity-quote');
@@ -1596,46 +1553,15 @@ async function openClientQuoteModal(id) {
   try {
     const modal = document.getElementById('modal-editar-cotizacion-cliente');
     if (!modal) throw new Error('Modal no encontrado');
-
-    // --- INYECTAR ADVERTENCIA SI NO EXISTE ---
-    // Asegurarnos de que el div de advertencia esté presente en el modal.
-    let warningDiv = modal.querySelector('.quote-change-warning');
-    if (!warningDiv) {
-      warningDiv = document.createElement('div');
-      warningDiv.className = 'quote-change-warning';
-      warningDiv.innerHTML = `
-        <i class="fa-solid fa-circle-info"></i>
-        <span>Al modificar la cotización, el total cambiará y los precios unitarios podrían ser ajustados por un administrador durante la revisión.</span>
-      `;
-      const modalActions = modal.querySelector('.modal-actions');
-      if (modalActions) modalActions.before(warningDiv);
-    }
     
     const tbody = modal.querySelector('#clientCotdetalleTable tbody');
     if (!tbody) throw new Error('Tabla del modal no encontrada');
 
     // Configurar botones de cierre
-    const saveButton = modal.querySelector('#btn-save-client-cot');
     const btnCancel = modal.querySelector('#btn-cancel-client-cot');
     if (btnCancel) btnCancel.onclick = () => modal.style.display = 'none';
     setupModalCloseListeners(modal);
-
-    // Ocultar la advertencia al abrir el modal
-    if (warningDiv) warningDiv.style.display = 'none';
     
-    // Deshabilitar el botón de guardar por defecto
-    if (saveButton) {
-      saveButton.disabled = true;
-      saveButton.style.opacity = '0.6';
-      saveButton.style.cursor = 'not-allowed';
-    }
-    const enableSaveButton = () => {
-      if (saveButton && saveButton.disabled) {
-        saveButton.disabled = false;
-        saveButton.style.opacity = '1';
-        saveButton.style.cursor = 'pointer';
-      }
-    };
     // Mostrar modal y preparar
     modal.style.display = 'flex';
     modal.querySelector('#client-cot-id-label').textContent = `#${String(id).padStart(6, '0')}`;
@@ -1659,7 +1585,7 @@ async function openClientQuoteModal(id) {
       tbody.innerHTML = details.map(d => `
         <tr data-id-detalle="${d.id_detalle}">
           <td>${d.nombre_producto}</td>
-          <td><input type="number" class="input-quantity-quote" value="${d.cantidad}" min="1" max="100" oninput="this.value = this.value.replace(/[^0-9]/g, ''); if (parseInt(this.value, 10) > 100) this.value = 100;" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 6px;"></td>
+          <td><input type="number" class="input-quantity-quote" value="${d.cantidad}" min="1" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 6px;"></td>
           <td>$${Number(d.precio_unitario).toFixed(2)}</td>
           <td><button class="btn-delete-item-quote" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
         </tr>
@@ -1675,21 +1601,14 @@ async function openClientQuoteModal(id) {
         const row = deleteBtn.closest('tr');
         deletedDetails.push(row.dataset.idDetalle);
         row.remove();
-        if (warningDiv) warningDiv.style.display = 'block'; // Mostrar advertencia
-        enableSaveButton(); // Habilitar guardado
         recalcClientQuoteTotal();
       }
     };
 
-    tbody.oninput = () => {
-      // Al cambiar una cantidad, recalcular el total Y mostrar la advertencia.
-      recalcClientQuoteTotal();
-      enableSaveButton(); // Habilitar guardado
-      if (warningDiv) warningDiv.style.display = 'block';
-    };
+    tbody.oninput = () => recalcClientQuoteTotal();
 
     // Guardar cambios
-    if(saveButton) saveButton.onclick = async () => {
+    modal.querySelector('#btn-save-client-cot').onclick = async () => {
       const updates = [];
       tbody.querySelectorAll('tr').forEach(row => {
         updates.push({
