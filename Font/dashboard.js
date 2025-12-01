@@ -1559,7 +1559,7 @@ async function openEditQuoteModal(id) {
     if (!tbody) throw new Error('Tabla de detalles no encontrada');
     
     tbody.innerHTML = detalles.map(d => `
-      <tr data-id-detalle="${d.id_detalle}" data-cantidad-anterior="${d.subtotal}">
+      <tr data-id-detalle="${d.id_detalle}" data-cantidad-anterior="${d.cantidad}">
         <td style="display:flex;align-items:center;gap:8px;">
           ${d.ruta_imagen ? `<img src="${d.ruta_imagen}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">` : ''}
           <span>${d.nombre_producto}</span>
