@@ -1375,15 +1375,11 @@ async function openEditQuoteModal(id) {
           ${d.ruta_imagen ? `<img src="${d.ruta_imagen}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">` : ''}
           <span>${d.nombre_producto}</span>
         </td>
-        <td>
-          <input type="number" class="input-cantidad" value="${d.cantidad}" min="1" 
-                 oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                 style="width:70px;padding:6px;text-align:center;border:1px solid #ccc;border-radius:6px;" />
-        </td>
+        <td>${d.cantidad}</td>
         <td>
           <input type="number" step="0.01" class="input-precio"
             value="${d.precio_unitario == null ? '' : Number(d.precio_unitario).toFixed(2)}"
-            style="width:100px;padding:6px;border:1px solid #ccc;border-radius:6px;" />
+            style="width:120px;padding:6px;border:1px solid #ccc;border-radius:6px;" />
         </td>
         <td class="td-subtotal">
           ${d.subtotal == null ? '-' : Number(d.subtotal).toFixed(2)}
@@ -1391,31 +1387,14 @@ async function openEditQuoteModal(id) {
       </tr>
     `).join('');
 
-    // --- CÁLCULO INICIAL DE SUBTOTALES ---
-    // Función para calcular el subtotal de una fila
-    const calcularSubtotalFila = (tr) => {
-      const cantidad = Number(tr.querySelector('.input-cantidad').value);
-      const precio = parseFloat(tr.querySelector('.input-precio').value);
-      const tdSubtotal = tr.querySelector('.td-subtotal');
-
-      if (tdSubtotal && !isNaN(cantidad) && !isNaN(precio)) {
-        tdSubtotal.textContent = (cantidad * precio).toFixed(2);
-      } else if (tdSubtotal) {
-        tdSubtotal.textContent = '-';
-      }
-    };
-
-    // Calcular todos los subtotales al abrir el modal
-    tbody.querySelectorAll('tr').forEach(calcularSubtotalFila);
-
     /* ====== LISTENERS PARA RECÁLCULO DINÁMICO ====== */
-    tbody.querySelectorAll('.input-precio, .input-cantidad').forEach(input => {
+    tbody.querySelectorAll('.input-precio').forEach(input => {
       input.addEventListener('input', e => {
         const tr = e.target.closest('tr');
-        if (!tr) return;
+        if (!tr || !tr.cells[1]) return;
         
-        const cantidad = Number(tr.querySelector('.input-cantidad').value);
-        const precio = parseFloat(tr.querySelector('.input-precio').value);
+        const cantidad = Number(tr.cells[1].textContent);
+        const precio = parseFloat(e.target.value);
         const tdSubtotal = tr.querySelector('.td-subtotal');
 
         if (tdSubtotal) {
@@ -1427,7 +1406,6 @@ async function openEditQuoteModal(id) {
           }
         }
 
-        // Llamar a la función que recalcula el total general
         recalcTotal();
       });
     });
@@ -1444,16 +1422,14 @@ async function openEditQuoteModal(id) {
         rows.forEach(tr => {
           const id_detalle = Number(tr.dataset.idDetalle);
           const precioInput = tr.querySelector('.input-precio');
-          const cantidadInput = tr.querySelector('.input-cantidad');
           const subtotalCell = tr.querySelector('.td-subtotal');
           
-          if (precioInput && subtotalCell && cantidadInput) {
+          if (precioInput && subtotalCell) {
             const precio = precioInput.value.trim();
             const subtotalText = subtotalCell.textContent.trim();
 
             payload.push({
               id_detalle,
-              cantidad: Number(cantidadInput.value),
               precio_unitario: precio === '' ? null : parseFloat(precio),
               subtotal: subtotalText === '-' ? null : parseFloat(subtotalText)
             });

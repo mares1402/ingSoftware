@@ -249,29 +249,16 @@ app.put('/api/quotes/:id/update', isAuthenticated, (req, res) => {
 
     const finishUpdate = () => {
       if (responseSent) return;
-
-      // 1. Recalcular subtotales y el total general de la cotización.
-      const updateTotalSql = `
-        UPDATE Cotizaciones c
-        JOIN (
-          SELECT id_cotizacion, SUM(cantidad * COALESCE(precio_unitario, 0)) AS nuevo_total
-          FROM DetalleCotizacion
-          WHERE id_cotizacion = ?
-          GROUP BY id_cotizacion
-        ) dt ON c.id_cotizacion = dt.id_cotizacion
-        SET c.total = dt.nuevo_total, c.estado_cotizacion = 'Pendiente'
-        WHERE c.id_cotizacion = ?
-      `;
-
-      conexion.query(updateTotalSql, [cotId, cotId], (totalErr) => {
-        if (totalErr) {
-          console.error('Error al recalcular total y estado:', totalErr);
-          if (!responseSent) res.status(500).json({ mensaje: 'Error al finalizar la actualización de la cotización' });
+      // Una vez que los detalles se actualizan/eliminan, cambiamos el estado de la cotización a 'Pendiente'
+      const updateStatusSql = "UPDATE Cotizaciones SET estado_cotizacion = 'Pendiente' WHERE id_cotizacion = ?";
+      conexion.query(updateStatusSql, [cotId], (statusErr) => {
+        if (statusErr) {
+          console.error('Error al actualizar estado de cotización:', statusErr);
+          if (!responseSent) res.status(500).json({ mensaje: 'Error al actualizar el estado de la cotización' });
           responseSent = true;
           return;
         }
-
-        if (!responseSent) res.json({ mensaje: 'Cotización actualizada y enviada para revisión' });
+        if (!responseSent) res.json({ mensaje: 'Cotización actualizada correctamente' });
         responseSent = true;
       });
     };
@@ -281,11 +268,8 @@ app.put('/api/quotes/:id/update', isAuthenticated, (req, res) => {
       let completed = 0;
       updates.forEach(update => {
         conexion.query(
-          `UPDATE DetalleCotizacion 
-           SET cantidad = ?, 
-               subtotal = ? * COALESCE(precio_unitario, 0) 
-           WHERE id_detalle = ?`,
-          [update.cantidad, update.cantidad, update.id],
+          'UPDATE DetalleCotizacion SET cantidad = ? WHERE id_detalle = ?',
+          [update.cantidad, update.id],
           (err) => {
             if (err && !responseSent) {
               console.error('Error al actualizar:', err);
@@ -301,11 +285,8 @@ app.put('/api/quotes/:id/update', isAuthenticated, (req, res) => {
         );
       });
     } else if (deletes.length > 0) {
-      // Si solo hubo eliminaciones, recalcular el total de todos modos.
+      // Si solo hubo eliminaciones y no actualizaciones
       finishUpdate();
-    } else {
-      // Si no hubo cambios, no hacer nada.
-      if (!responseSent) res.json({ mensaje: 'No se realizaron cambios.' });
     }
   });
 });
