@@ -424,13 +424,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         tbody.onclick = (e) => {
           const editBtn = e.target.closest('.btn-edit-quote');
           if (editBtn) openClientQuoteModal(editBtn.dataset.id);
-          // Aquí se puede añadir la lógica para el botón de descarga en el futuro
+
+          const pdfBtn = e.target.closest('.btn-download-pdf');
+          if (pdfBtn) {
+            const quoteId = pdfBtn.dataset.id;
+            const row = pdfBtn.closest('tr');
+            const quoteDate = row.cells[1].textContent;
+            const quoteTotal = row.cells[3].textContent;
+
+            pdfBtn.disabled = true;
+            pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Icono de carga
+
+            generateQuotePDF(quoteId, quoteDate, quoteTotal).finally(() => {
+              pdfBtn.disabled = false;
+              pdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i>'; // Restaurar icono
+            });
+          }
         };
       } catch (err) {
         mostrarNotificacion('Error cargando cotizaciones: ' + err.message, 'error');
       }
     }
-<<<<<<< HEAD
 
     /**
      * Carga dinámicamente las librerías necesarias para generar PDFs.
@@ -582,8 +596,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarNotificacion(error.message || 'No se pudo generar el PDF.', 'error');
       }
     }
-=======
->>>>>>> parent of 7732cd6 (implementacion PDF)
     // --- Función para cargar usuarios ---
     async function loadUsuarios() {
       try {
