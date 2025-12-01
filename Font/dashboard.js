@@ -27,6 +27,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 4000);
   }
 
+  // Sanitiza un valor de precio para permitir hasta 12 dígitos enteros y 2 decimales.
+  function sanitizePriceValue(val) {
+    if (typeof val !== 'string') val = String(val || '');
+    // Eliminar caracteres no válidos (todo lo que no sea dígito o punto)
+    val = val.replace(/[^0-9.]/g, '');
+    // Limpiar ceros a la izquierda de la parte entera
+    const firstParts = val.split('.');
+    firstParts[0] = firstParts[0].replace(/^0+(?=\d)/, '') || '0';
+    // Detectar si el usuario está escribiendo un punto al final (ej: "123.")
+    const hasTrailingDot = val.endsWith('.');
+    // Si hay más de un punto, mantener sólo el primero
+    const parts = firstParts;
+    if (parts.length > 1) {
+      const intPart = parts[0].slice(0, 12);
+      const decPart = parts.slice(1).join('').slice(0, 2);
+      if (decPart.length > 0) return `${intPart}.${decPart}`;
+      if (hasTrailingDot) return `${intPart}.`;
+      return intPart;
+    }
+    // Sin parte decimal
+    return parts[0].slice(0, 12);
+  }
+
   /**
    * Muestra un modal de confirmación genérico.
    * @param {string} titulo El título del modal.
@@ -1385,32 +1408,14 @@ async function openEditQuoteModal(id) {
                </span>` 
             : ''
           }
-          <input type="number" class="input-cantidad" value="${d.cantidad}" min="1" max="100"
-                 oninput="this.value = this.value.replace(/[^0-9]/g, ''); if (parseInt(this.value, 10) > 100) this.value = 100;"
-                 style="width:70px;padding:6px;text-align:center;border:1px solid #ccc;border-radius:6px;" />
+             <input type="number" class="input-cantidad" value="${d.cantidad}" min="1" max="100" step="1" pattern="\\d+" inputmode="numeric"
+               oninput="this.value = this.value.replace(/[^0-9]/g, ''); if (parseInt(this.value, 10) > 100) this.value = 100;"
+               style="width:70px;padding:6px;text-align:center;border:1px solid #ccc;border-radius:6px;" />
         </td>
         <td>
-          <input type="number" step="0.01" class="input-precio"
+          <input type="text" inputmode="decimal" class="input-precio" maxlength="15" pattern="^\\d{1,12}(\\.\\d{1,2})?$"
             value="${d.precio_unitario == null ? '' : Number(d.precio_unitario).toFixed(2)}"
-            style="width:100px;padding:6px;border:1px solid #ccc;border-radius:6px;"
-            onkeydown="
-              const key = event.key;
-              const value = this.value;
-              const parts = value.split('.');
-              // Permitir teclas de control (borrar, flechas, etc.)
-              if (['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(key)) return;
-              // Prevenir segundo punto decimal
-              if (key === '.' && value.includes('.')) event.preventDefault();
-              // Prevenir más de 12 dígitos en la parte entera
-              if (parts[0].length >= 12 && !value.includes('.') && key !== '.') event.preventDefault();
-              // Prevenir más de 2 dígitos en la parte decimal
-              if (parts.length > 1 && parts[1].length >= 2) event.preventDefault();
-            "
-            onblur="
-              if (this.value) {
-                this.value = parseFloat(this.value).toFixed(2);
-              }
-            " />
+            style="width:180px;max-width:40vw;padding:6px;border:1px solid #ccc;border-radius:6px;" />
         </td>
         <td class="td-subtotal">
           ${d.subtotal == null ? '-' : Number(d.subtotal).toFixed(2)}
@@ -1440,13 +1445,30 @@ async function openEditQuoteModal(id) {
       input.addEventListener('input', e => {
         const tr = e.target.closest('tr');
         if (!tr) return;
-        
-        const cantidad = Number(tr.querySelector('.input-cantidad').value);
-        const precio = parseFloat(tr.querySelector('.input-precio').value);
+
+        // Sanitizar precio si el target es un input-precio
+        const precioInput = tr.querySelector('.input-precio');
+        if (precioInput) {
+          const sanitized = sanitizePriceValue(precioInput.value);
+          if (precioInput.value !== sanitized) precioInput.value = sanitized;
+        }
+
+        // Asegurar cantidad entera
+        const cantidadInput = tr.querySelector('.input-cantidad');
+        if (cantidadInput) {
+          cantidadInput.value = String(cantidadInput.value).replace(/[^0-9]/g, '');
+          if (cantidadInput.value === '') cantidadInput.value = 0;
+          // respetar max si existe
+          const max = parseInt(cantidadInput.getAttribute('max'), 10);
+          if (!isNaN(max) && parseInt(cantidadInput.value, 10) > max) cantidadInput.value = max;
+        }
+
+        const cantidad = Number(cantidadInput ? cantidadInput.value : 0);
+        const precio = parseFloat(precioInput ? precioInput.value : NaN);
         const tdSubtotal = tr.querySelector('.td-subtotal');
 
         if (tdSubtotal) {
-          if (!isNaN(precio) && !isNaN(cantidad)) {
+          if (!isNaN(precio) && !isNaN(cantidad) && cantidad > 0) {
             const subtotal = cantidad * precio;
             tdSubtotal.textContent = subtotal.toFixed(2);
           } else {
@@ -1459,6 +1481,26 @@ async function openEditQuoteModal(id) {
       });
     });
 
+    // Añadir manejo de pegado y blur específicamente para inputs de precio
+    tbody.querySelectorAll('.input-precio').forEach(pi => {
+      pi.addEventListener('paste', e => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text') || '';
+        const sanitized = sanitizePriceValue(pasted);
+        pi.value = sanitized;
+        // disparar evento input manualmente para recalcular
+        pi.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+
+      pi.addEventListener('blur', e => {
+        const v = sanitizePriceValue(pi.value);
+        if (v === '') { pi.value = ''; return; }
+        // Formatear a 2 decimales si tiene parte decimal o si se requiere
+        const num = parseFloat(v);
+        if (!isNaN(num)) pi.value = num.toFixed(2);
+      });
+    });
+
     recalcTotal();
 
     /* ====== GUARDAR ====== */
@@ -1467,6 +1509,28 @@ async function openEditQuoteModal(id) {
       btnSave.onclick = async () => {
         const rows = tbody.querySelectorAll('tr');
         const payload = [];
+        let isValid = true;
+
+        // --- NUEVA VALIDACIÓN AL GUARDAR ---
+        for (const tr of rows) {
+          const precioInput = tr.querySelector('.input-precio');
+          precioInput.style.borderColor = '#ccc'; // Resetear borde
+          const precio = precioInput.value.trim();
+
+          // Expresión regular para 1-12 enteros y hasta 2 decimales
+          const precioRegex = /^\d{1,12}(\.\d{1,2})?$/;
+
+          if (precio !== '' && !precioRegex.test(precio)) {
+            precioInput.style.borderColor = 'red';
+            isValid = false;
+          }
+        }
+
+        if (!isValid) {
+          mostrarNotificacion('Formato de precio incorrecto. Debe tener hasta 12 dígitos enteros y 2 decimales.', 'error');
+          return; // Detener el guardado
+        }
+        // --- FIN DE LA VALIDACIÓN ---
 
         rows.forEach(tr => {
           const id_detalle = Number(tr.dataset.idDetalle);
@@ -1480,7 +1544,7 @@ async function openEditQuoteModal(id) {
 
             payload.push({
               id_detalle,
-              cantidad: Number(cantidadInput.value),
+              cantidad: parseInt(cantidadInput.value, 10) || 0,
               precio_unitario: precio === '' ? null : parseFloat(precio),
               subtotal: subtotalText === '-' ? null : parseFloat(subtotalText)
             });
@@ -1659,7 +1723,7 @@ async function openClientQuoteModal(id) {
       tbody.innerHTML = details.map(d => `
         <tr data-id-detalle="${d.id_detalle}">
           <td>${d.nombre_producto}</td>
-          <td><input type="number" class="input-quantity-quote" value="${d.cantidad}" min="1" max="100" oninput="this.value = this.value.replace(/[^0-9]/g, ''); if (parseInt(this.value, 10) > 100) this.value = 100;" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 6px;"></td>
+          <td><input type="number" class="input-quantity-quote" value="${d.cantidad}" min="1" max="100" step="1" pattern="\\d+" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, ''); if (parseInt(this.value, 10) > 100) this.value = 100;" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 6px;"></td>
           <td>$${Number(d.precio_unitario).toFixed(2)}</td>
           <td><button class="btn-delete-item-quote" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
         </tr>
@@ -1694,7 +1758,7 @@ async function openClientQuoteModal(id) {
       tbody.querySelectorAll('tr').forEach(row => {
         updates.push({
           id: row.dataset.idDetalle,
-          cantidad: row.querySelector('.input-quantity-quote').value
+          cantidad: parseInt(row.querySelector('.input-quantity-quote').value, 10) || 0
         });
       });
 
