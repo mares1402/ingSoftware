@@ -481,36 +481,12 @@ document.addEventListener('DOMContentLoaded', async () => {
      * NOTA: Necesitas crear este endpoint en tu servidor.
      */
     async function fetchQuoteDetails(quoteId) {
-      // --- INICIO: CÓDIGO DE PRUEBA TEMPORAL ---
-      // Este bloque simula una respuesta exitosa del servidor.
-      // Deberás eliminarlo y descomentar el bloque original cuando tu backend esté listo.
-      console.warn(`MODO DE PRUEBA: Usando datos de ejemplo para la cotización ${quoteId}.`);
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simular retraso de red
-      return {
-        detalles: [
-          { nombre_producto: 'Engrane de Acero 45T', cantidad: 5, precio_unitario: 1250.00 },
-          { nombre_producto: 'Tornillo de Alta Resistencia M12', cantidad: 200, precio_unitario: 15.50 },
-          { nombre_producto: 'Servicio de Mantenimiento Preventivo', cantidad: 8, precio_unitario: 800.00 }
-        ],
-        cliente: {
-          nombre: 'Juan',
-          paterno: 'Pérez',
-          materno: 'García',
-          correo: 'juan.perez@example.com'
-        }
-      };
-      // --- FIN: CÓDIGO DE PRUEBA TEMPORAL ---
-
-      /* --- CÓDIGO REAL (actualmente desactivado) ---
       try {
-        // Este endpoint debe devolver los detalles de la cotización en formato JSON.
-        // Ejemplo de respuesta: [{ nombre_producto: 'Tornillo', cantidad: 100, precio_unitario: 2.50 }, ...]
         const res = await fetch(`/api/quotes/${quoteId}/details`, { credentials: 'same-origin' });
         if (!res.ok) {
           throw new Error('No se pudieron obtener los detalles de la cotización.');
         }
         const data = await res.json();
-        // Ahora esperamos un objeto { detalles: [...], cliente: {...} }
         if (!data.detalles || !data.cliente) throw new Error('La respuesta del servidor no tiene el formato esperado.');
         return data;
       } catch (error) {
@@ -518,7 +494,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         mostrarNotificacion(error.message, 'error');
         return null; // Devolver null en caso de error
       }
-      */
     }
 
     /**

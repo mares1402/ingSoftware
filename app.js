@@ -193,11 +193,11 @@ app.post('/api/quotes', isAuthenticated, (req, res) => {
 });
 
 // Obtener detalles de una cotización específica del usuario
-app.get('/api/quotes/:id', isAuthenticated, (req, res) => {
+app.get('/api/quotes/:id/details', isAuthenticated, (req, res) => {
   const cotId = req.params.id;
   const userId = req.session.user.id_usuario;
-  
-  const sql = `
+
+  const detailsSql = `
     SELECT d.id_detalle, d.id_cotizacion, d.id_producto, d.cantidad,
            d.precio_unitario, d.subtotal,
            p.nombre_producto, p.ruta_imagen
@@ -206,12 +206,36 @@ app.get('/api/quotes/:id', isAuthenticated, (req, res) => {
     JOIN Cotizaciones c ON d.id_cotizacion = c.id_cotizacion
     WHERE d.id_cotizacion = ? AND c.id_usuario = ?
   `;
-  conexion.query(sql, [cotId, userId], (err, results) => {
+
+  const clientSql = `
+    SELECT nombre, paterno, materno, correo 
+    FROM Usuario 
+    WHERE id_usuario = ?
+  `;
+
+  // Usar una transacción o dos consultas paralelas para eficiencia
+  conexion.query(detailsSql, [cotId, userId], (err, detalles) => {
     if (err) {
-      console.error('Error al obtener detalles:', err);
-      return res.status(500).json({ mensaje: 'Error al obtener detalles', error: err.message });
+      console.error('Error al obtener detalles de cotización:', err);
+      return res.status(500).json({ mensaje: 'Error al obtener los detalles de la cotización' });
     }
-    res.json(results);
+
+    conexion.query(clientSql, [userId], (clientErr, clientResults) => {
+      if (clientErr) {
+        console.error('Error al obtener datos del cliente:', clientErr);
+        return res.status(500).json({ mensaje: 'Error al obtener la información del cliente' });
+      }
+
+      if (clientResults.length === 0) {
+        return res.status(404).json({ mensaje: 'Cliente no encontrado' });
+      }
+
+      // Estructurar la respuesta como se espera en el frontend
+      res.json({
+        detalles: detalles,
+        cliente: clientResults[0]
+      });
+    });
   });
 });
 
