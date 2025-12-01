@@ -192,6 +192,105 @@ app.post('/api/quotes', isAuthenticated, (req, res) => {
   });
 });
 
+// Obtener detalles de una cotización específica del usuario
+app.get('/api/quotes/:id', isAuthenticated, (req, res) => {
+  const cotId = req.params.id;
+  const userId = req.session.user.id_usuario;
+  
+  const sql = `
+    SELECT d.id_detalle, d.id_cotizacion, d.id_producto, d.cantidad,
+           d.precio_unitario, d.subtotal,
+           p.nombre_producto, p.ruta_imagen
+    FROM DetalleCotizacion d
+    JOIN Productos p ON d.id_producto = p.id_producto
+    JOIN Cotizaciones c ON d.id_cotizacion = c.id_cotizacion
+    WHERE d.id_cotizacion = ? AND c.id_usuario = ?
+  `;
+  conexion.query(sql, [cotId, userId], (err, results) => {
+    if (err) {
+      console.error('Error al obtener detalles:', err);
+      return res.status(500).json({ mensaje: 'Error al obtener detalles', error: err.message });
+    }
+    res.json(results);
+  });
+});
+
+// Actualizar cantidades y eliminar artículos en cotización del cliente
+app.put('/api/quotes/:id/update', isAuthenticated, (req, res) => {
+  const cotId = req.params.id;
+  const userId = req.session.user.id_usuario;
+  const { updates = [], deletes = [] } = req.body;
+
+  // Verificar que la cotización pertenece al usuario
+  const checkSql = 'SELECT id_cotizacion FROM Cotizaciones WHERE id_cotizacion = ? AND id_usuario = ?';
+  conexion.query(checkSql, [cotId, userId], (err, results) => {
+    if (err) return res.status(500).json({ mensaje: 'Error al verificar cotización', error: err });
+    if (results.length === 0) {
+      return res.status(403).json({ mensaje: 'No tienes permiso para editar esta cotización' });
+    }
+
+    // Eliminar detalles
+    if (deletes.length > 0) {
+      const placeholders = deletes.map(() => '?').join(',');
+      conexion.query(
+        `DELETE FROM DetalleCotizacion WHERE id_detalle IN (${placeholders})`,
+        deletes,
+        (err) => {
+          if (err) {
+            console.error('Error al eliminar:', err);
+            return res.status(500).json({ mensaje: 'Error al eliminar artículos' });
+          }
+        }
+      );
+    }
+
+    // Variable para controlar la respuesta
+    let responseSent = false;
+
+    const finishUpdate = () => {
+      if (responseSent) return;
+      // Una vez que los detalles se actualizan/eliminan, cambiamos el estado de la cotización a 'Pendiente'
+      const updateStatusSql = "UPDATE Cotizaciones SET estado_cotizacion = 'Pendiente' WHERE id_cotizacion = ?";
+      conexion.query(updateStatusSql, [cotId], (statusErr) => {
+        if (statusErr) {
+          console.error('Error al actualizar estado de cotización:', statusErr);
+          if (!responseSent) res.status(500).json({ mensaje: 'Error al actualizar el estado de la cotización' });
+          responseSent = true;
+          return;
+        }
+        if (!responseSent) res.json({ mensaje: 'Cotización actualizada correctamente' });
+        responseSent = true;
+      });
+    };
+
+    // Actualizar cantidades
+    if (updates.length > 0) {
+      let completed = 0;
+      updates.forEach(update => {
+        conexion.query(
+          'UPDATE DetalleCotizacion SET cantidad = ? WHERE id_detalle = ?',
+          [update.cantidad, update.id],
+          (err) => {
+            if (err && !responseSent) {
+              console.error('Error al actualizar:', err);
+              res.status(500).json({ mensaje: 'Error al actualizar cantidades' });
+              responseSent = true;
+              return;
+            }
+            completed++;
+            if (completed === updates.length) {
+              finishUpdate();
+            }
+          }
+        );
+      });
+    } else if (deletes.length > 0) {
+      // Si solo hubo eliminaciones y no actualizaciones
+      finishUpdate();
+    }
+  });
+});
+
 // Servir dashboard protegido
 app.get('/dashboard', isAuthenticated, (req, res, next) => {
   const dashboardPath = path.join(__dirname, 'Private', 'dashboard.html');

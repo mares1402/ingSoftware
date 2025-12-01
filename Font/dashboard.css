@@ -440,7 +440,8 @@ hr { border:0; border-top:1px solid #eee; }
 .btn-edit-product, .btn-delete-product,
 .btn-edit-supplier, .btn-delete-supplier,
 .btn-edit-category, .btn-delete-category,
-.btn-edit-quote {
+.btn-edit-quote,
+.btn-delete-item-quote {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -457,7 +458,7 @@ hr { border:0; border-top:1px solid #eee; }
   color: var(--accent);
 }
 
-.btn-delete-user:hover, .btn-delete-product:hover, .btn-delete-supplier:hover, .btn-delete-category:hover {
+.btn-delete-user:hover, .btn-delete-product:hover, .btn-delete-supplier:hover, .btn-delete-category:hover, .btn-delete-item-quote:hover {
   background-color: #fff0f0;
   color: var(--danger);
 }
