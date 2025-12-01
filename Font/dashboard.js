@@ -1875,15 +1875,15 @@ async function openClientQuoteModal(id) {
     let deletedDetails = [];
 
     // Obtener detalles
-    const res = await fetch(`/api/quotes/${id}/details`, { credentials: 'same-origin' });
+    const res = await fetch(`/api/quotes/${id}`, { credentials: 'same-origin' });
     if (!res.ok) {
       const errorData = await res.json();
       throw new Error(errorData.mensaje || 'No se pudieron obtener los detalles de la cotización.');
     }
-    const quoteData = await res.json();
-    const details = quoteData.detalles; // Los detalles están dentro de la propiedad 'detalles'
+    const details = await res.json();
+    console.log('Detalles obtenidos:', details);
 
-    if (!details || !Array.isArray(details) || details.length === 0) {
+    if (!details || details.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Esta cotización no tiene productos.</td></tr>';
     } else {
       tbody.innerHTML = details.map(d => `
