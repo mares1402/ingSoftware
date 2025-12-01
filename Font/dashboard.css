@@ -196,13 +196,14 @@ hr { border:0; border-top:1px solid #eee; }
 /* === Estilos para Modal de Confirmación === */
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 12px;
   margin-top: 20px;
 }
 
 .modal-actions .btn-confirm,
 .modal-actions .btn-cancel {
+  flex: 1;
   padding: 10px 20px;
   border-radius: 6px;
   border: none;
@@ -212,16 +213,16 @@ hr { border:0; border-top:1px solid #eee; }
 }
 
 .modal-actions .btn-confirm {
-  background-color: var(--danger);
+  background-color: #28a745;
   color: white;
 }
-.modal-actions .btn-confirm:hover { background-color: #e04444; transform: translateY(-1px); }
+.modal-actions .btn-confirm:hover { background-color: #218838; transform: translateY(-1px); }
 
 .modal-actions .btn-cancel {
-  background-color: #f0f2f5;
-  color: var(--text);
+  background-color: #6c757d;
+  color: white;
 }
-.modal-actions .btn-cancel:hover { background-color: #e2e6ea; }
+.modal-actions .btn-cancel:hover { background-color: #5a6268; }
 /* Botón de éxito (verde) para acciones positivas dentro de modales */
 .modal-actions .btn-success {
   background-color: #28a745;
@@ -461,13 +462,9 @@ hr { border:0; border-top:1px solid #eee; }
 .btn-edit-user, .btn-delete-user,
 .btn-edit-product, .btn-delete-product,
 .btn-edit-supplier, .btn-delete-supplier,
-<<<<<<< HEAD
 .btn-edit-category, .btn-delete-category,
 .btn-edit-quote,
 .btn-delete-item-quote {
-=======
-.btn-edit-category, .btn-delete-category {
->>>>>>> parent of b77b2da (diseño de editar cotizacion)
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -478,7 +475,7 @@ hr { border:0; border-top:1px solid #eee; }
   color: var(--muted);
 }
 
-.btn-edit-user:hover, .btn-edit-product:hover, .btn-edit-supplier:hover, .btn-edit-category:hover {
+.btn-edit-user:hover, .btn-edit-product:hover, .btn-edit-supplier:hover, .btn-edit-category:hover, .btn-edit-quote:hover {
   background-color: #e9f2ff;
   border-color: #c7dfff;
   color: var(--accent);
