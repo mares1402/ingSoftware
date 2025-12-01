@@ -424,10 +424,201 @@ document.addEventListener('DOMContentLoaded', async () => {
         tbody.onclick = (e) => {
           const editBtn = e.target.closest('.btn-edit-quote');
           if (editBtn) openClientQuoteModal(editBtn.dataset.id);
-          // Aquí se puede añadir la lógica para el botón de descarga en el futuro
+
+          const pdfBtn = e.target.closest('.btn-download-pdf');
+          if (pdfBtn) {
+            const quoteId = pdfBtn.dataset.id;
+            const row = pdfBtn.closest('tr');
+            const quoteDate = row.cells[1].textContent;
+            const quoteTotal = row.cells[3].textContent;
+
+            pdfBtn.disabled = true;
+            pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Icono de carga
+
+            generateQuotePDF(quoteId, quoteDate, quoteTotal).finally(() => {
+              pdfBtn.disabled = false;
+              pdfBtn.innerHTML = '<i class="fa-solid fa-file-pdf"></i>'; // Restaurar icono
+            });
+          }
         };
       } catch (err) {
         mostrarNotificacion('Error cargando cotizaciones: ' + err.message, 'error');
+      }
+    }
+
+    /**
+     * Carga dinámicamente las librerías necesarias para generar PDFs.
+     * Solo se ejecuta una vez.
+     */
+    let pdfLibrariesLoaded = false;
+    async function loadPdfLibraries() {
+      if (pdfLibrariesLoaded) return;
+
+      const loadScript = (src) => {
+        return new Promise((resolve, reject) => {
+          if (document.querySelector(`script[src="${src}"]`)) {
+            return resolve();
+          }
+          const script = document.createElement('script');
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error(`No se pudo cargar el script: ${src}`));
+          document.head.appendChild(script);
+        });
+      };
+
+      try {
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js");
+        pdfLibrariesLoaded = true;
+      } catch (error) {
+        throw new Error("No se pudieron cargar las librerías para generar el PDF.");
+      }
+    }
+
+    /**
+     * Obtiene los detalles de una cotización (productos, etc.) desde el backend.
+     * NOTA: Necesitas crear este endpoint en tu servidor.
+     */
+    async function fetchQuoteDetails(quoteId) {
+      // --- INICIO: CÓDIGO DE PRUEBA TEMPORAL ---
+      // Este bloque simula una respuesta exitosa del servidor.
+      // Deberás eliminarlo y descomentar el bloque original cuando tu backend esté listo.
+      console.warn(`MODO DE PRUEBA: Usando datos de ejemplo para la cotización ${quoteId}.`);
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simular retraso de red
+      return {
+        detalles: [
+          { nombre_producto: 'Engrane de Acero 45T', cantidad: 5, precio_unitario: 1250.00 },
+          { nombre_producto: 'Tornillo de Alta Resistencia M12', cantidad: 200, precio_unitario: 15.50 },
+          { nombre_producto: 'Servicio de Mantenimiento Preventivo', cantidad: 8, precio_unitario: 800.00 }
+        ],
+        cliente: {
+          nombre: 'Juan',
+          paterno: 'Pérez',
+          materno: 'García',
+          correo: 'juan.perez@example.com'
+        }
+      };
+      // --- FIN: CÓDIGO DE PRUEBA TEMPORAL ---
+
+      /* --- CÓDIGO REAL (actualmente desactivado) ---
+      try {
+        // Este endpoint debe devolver los detalles de la cotización en formato JSON.
+        // Ejemplo de respuesta: [{ nombre_producto: 'Tornillo', cantidad: 100, precio_unitario: 2.50 }, ...]
+        const res = await fetch(`/api/quotes/${quoteId}/details`, { credentials: 'same-origin' });
+        if (!res.ok) {
+          throw new Error('No se pudieron obtener los detalles de la cotización.');
+        }
+        const data = await res.json();
+        // Ahora esperamos un objeto { detalles: [...], cliente: {...} }
+        if (!data.detalles || !data.cliente) throw new Error('La respuesta del servidor no tiene el formato esperado.');
+        return data;
+      } catch (error) {
+        console.error(`Error en fetchQuoteDetails para ${quoteId}:`, error);
+        mostrarNotificacion(error.message, 'error');
+        return null; // Devolver null en caso de error
+      }
+      */
+    }
+
+    /**
+     * Genera un PDF para una cotización específica.
+     */
+    async function generateQuotePDF(quoteId, quoteDate, quoteTotal) {
+      try {
+        // 1. Asegurarse de que las librerías estén cargadas
+        await loadPdfLibraries();
+      } catch (error) {
+        mostrarNotificacion('Error: La librería jsPDF no está cargada.', 'error');
+        return;
+      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      if (typeof doc.autoTable !== 'function') {
+        mostrarNotificacion('Error: El plugin jsPDF-AutoTable no está cargado.', 'error');
+        return;
+      }
+
+      // Obtener los datos ANTES de crear el PDF
+      const quoteData = await fetchQuoteDetails(quoteId);
+      if (!quoteData) {
+        // fetchQuoteDetails ya mostró una notificación de error
+        return;
+      }
+      const { detalles, cliente } = quoteData;
+      const clientFullName = `${cliente.nombre || ''} ${cliente.paterno || ''} ${cliente.materno || ''}`.trim();
+
+      try {
+        // 2. Cargar el logo
+        const logoUrl = '../Font/imgs/mount logo.png'; // Ruta relativa al HTML principal (dashboard.html)
+        const logoImg = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous"; // Necesario si la imagen está en un dominio diferente o para evitar problemas de CORS
+            img.src = logoUrl;
+            img.onload = () => resolve(img);
+            img.onerror = (err) => reject(new Error('No se pudo cargar el logo. Verifica la ruta y los permisos.'));
+        });
+
+        // --- NUEVA ESTRUCTURA DEL ENCABEZADO ---
+
+        // 3. Título principal
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        doc.text('COTIZACIÓN', 200, 20, { align: 'right' });
+
+        // 4. Logo e Información de la empresa (izquierda)
+        doc.addImage(logoImg, 'PNG', 15, 25, 40, 40);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Mount Servicios y Suministros Industriales', 65, 35);
+        doc.setFont('helvetica', 'normal');
+        doc.text('contacto@mount.com', 65, 41);
+        doc.text('+52 123 456 7890', 65, 47);
+        doc.text('Dirección de la Empresa, Ciudad, Estado, CP', 65, 53);
+
+        // 5. Información de la cotización (derecha)
+        doc.setFontSize(10);
+        doc.text(`Folio: #${String(quoteId).padStart(6, '0')}`, 200, 35, { align: 'right' });
+        doc.text(`Fecha: ${quoteDate}`, 200, 41, { align: 'right' });
+
+        // 6. Información del cliente
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('CLIENTE:', 15, 75);
+        doc.setFont('helvetica', 'normal');
+        doc.text(clientFullName, 15, 81);
+        doc.text(cliente.correo, 15, 87);
+
+        // 7. Tabla de productos
+        const tableData = detalles.map(item => [item.nombre_producto, item.cantidad, `$${Number(item.precio_unitario || 0).toFixed(2)}`, `$${(item.cantidad * (item.precio_unitario || 0)).toFixed(2)}`]);
+
+        doc.autoTable({
+          startY: 95,
+          head: [['Producto', 'Cantidad', 'Precio Unitario', 'Subtotal']],
+          body: tableData,
+          foot: [['', '', 'Total', quoteTotal]],
+          theme: 'striped',
+          headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+          footStyles: { fillColor: [236, 240, 241], textColor: 44, fontStyle: 'bold' },
+          didDrawPage: function (data) {
+            // Pie de página
+            const pageCount = doc.internal.getNumberOfPages();
+            doc.setFontSize(10);
+            doc.setTextColor(150);
+            doc.text(
+              `Página ${data.pageNumber} de ${pageCount}`,
+              data.settings.margin.left,
+              doc.internal.pageSize.height - 10
+            );
+          }
+        });
+
+        // 8. Guardar el PDF
+        doc.save(`Cotizacion-${String(quoteId).padStart(6, '0')}.pdf`);
+      } catch (error) {
+        console.error('Error al generar el PDF:', error);
+        mostrarNotificacion(error.message || 'No se pudo generar el PDF.', 'error');
       }
     }
     // --- Función para cargar usuarios ---

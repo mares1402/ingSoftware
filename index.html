@@ -131,6 +131,9 @@
                         return;
                     }
 
+                    // Asegurar que cada cantidad esté en el rango [1,100]
+                    cart = cart.map(item => ({ ...item, quantity: Math.max(1, Math.min(100, item.quantity)) }));
+
                     // El contador muestra el número de *tipos* de productos diferentes.
                     cartCounter.textContent = cart.length;
 
@@ -269,9 +272,13 @@
                                 const existingProduct = cart.find(item => item.productId === productId);
 
                                 if (existingProduct) {
-                                    // Si el producto ya está en el carrito, incrementa la cantidad
-                                    existingProduct.quantity++;
-                                    showToastNotification('Cantidad actualizada en el carrito.', 'success');
+                                    // Si el producto ya está en el carrito, incrementa la cantidad hasta 100
+                                    if (existingProduct.quantity < 100) {
+                                        existingProduct.quantity = Math.min(100, existingProduct.quantity + 1);
+                                        showToastNotification('Cantidad actualizada en el carrito.', 'success');
+                                    } else {
+                                        showToastNotification('Has alcanzado la cantidad máxima (100) para este producto.', 'info');
+                                    }
                                 } else {
                                     // Si es un producto nuevo, lo añade con cantidad 1
                                     cart.push({ productId: productId, quantity: 1 });
@@ -295,8 +302,12 @@
                         if (!productInCart) return;
 
                         if (target.matches('.increase-qty')) {
-                            // Aumentar cantidad
-                            productInCart.quantity++;
+                            // Aumentar cantidad (hasta 100)
+                            if (productInCart.quantity < 100) {
+                                productInCart.quantity = Math.min(100, productInCart.quantity + 1);
+                            } else {
+                                showToastNotification('Cantidad máxima (100) alcanzada para este producto.', 'info');
+                            }
                         } else if (target.matches('.decrease-qty')) {
                             // Disminuir cantidad
                             productInCart.quantity--;
