@@ -1008,19 +1008,29 @@ router.get('/cotizaciones', isAuthenticated, isAdmin, (req, res) => {
   const { search } = req.query;
 
   let sql = `
-    SELECT c.id_cotizacion, c.id_usuario, c.fecha_cotizacion, c.estado_cotizacion, c.total,
-           u.correo AS correo_usuario
+    SELECT 
+      c.id_cotizacion, 
+      c.id_usuario, 
+      c.fecha_cotizacion, 
+      c.estado_cotizacion, 
+      c.total,
+      u.correo AS correo_usuario
     FROM Cotizaciones c
     JOIN Usuario u ON c.id_usuario = u.id_usuario
+    LEFT JOIN DetalleCotizacion dc ON c.id_cotizacion = dc.id_cotizacion
   `;
   const params = [];
 
   if (search) {
-    sql += ` WHERE c.id_cotizacion LIKE ? OR u.correo LIKE ?`;
+    sql += ` WHERE (c.id_cotizacion LIKE ? OR u.correo LIKE ?)`;
     params.push(`%${search}%`, `%${search}%`);
   }
 
-  sql += ` ORDER BY c.fecha_cotizacion DESC`;
+  sql += ` 
+    GROUP BY c.id_cotizacion, c.id_usuario, c.fecha_cotizacion, c.estado_cotizacion, c.total, u.correo
+    HAVING SUM(CASE WHEN dc.estado_detalle != 'Inactivo' THEN 1 ELSE 0 END) > 0
+    ORDER BY c.fecha_cotizacion DESC
+  `;
 
   conexion.query(sql, params, (err, results) => {
     if (err) return res.status(500).json({ mensaje: 'Error al listar cotizaciones' });
@@ -1038,7 +1048,7 @@ router.get('/cotizaciones/:id/detalles', isAuthenticated, isAdmin, (req, res) =>
            p.nombre_producto, p.ruta_imagen
     FROM DetalleCotizacion d
     JOIN Productos p ON d.id_producto = p.id_producto
-    WHERE d.id_cotizacion = ?
+    WHERE d.id_cotizacion = ? AND d.estado_detalle != 'Inactivo'
   `;
   conexion.query(sql, [id], (err, results) => {
     if (err) return res.status(500).json({ mensaje: 'Error al obtener detalles' });

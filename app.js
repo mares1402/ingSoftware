@@ -144,21 +144,26 @@ app.get('/api/quotes', isAuthenticated, (req, res) => {
 
   let sql = `
     SELECT 
-      id_cotizacion, 
-      fecha_cotizacion, 
-      estado_cotizacion,
-      total 
-    FROM Cotizaciones 
-    WHERE id_usuario = ? 
+      c.id_cotizacion, 
+      c.fecha_cotizacion, 
+      c.estado_cotizacion,
+      c.total 
+    FROM Cotizaciones c
+    LEFT JOIN DetalleCotizacion dc ON c.id_cotizacion = dc.id_cotizacion
+    WHERE c.id_usuario = ? 
   `;
   const params = [userId];
 
   if (search) {
-    sql += ` AND id_cotizacion LIKE ?`;
+    sql += ` AND c.id_cotizacion LIKE ?`;
     params.push(`%${search}%`);
   }
 
-  sql += ` ORDER BY fecha_cotizacion DESC`;
+  sql += ` 
+    GROUP BY c.id_cotizacion, c.fecha_cotizacion, c.estado_cotizacion, c.total
+    HAVING SUM(CASE WHEN dc.estado_detalle != 'Inactivo' THEN 1 ELSE 0 END) > 0
+    ORDER BY c.fecha_cotizacion DESC
+  `;
 
   conexion.query(sql, params, (err, results) => {
     if (err) {
@@ -213,7 +218,7 @@ app.get('/api/quotes/:id', isAuthenticated, (req, res) => {
     FROM DetalleCotizacion d
     JOIN Productos p ON d.id_producto = p.id_producto
     JOIN Cotizaciones c ON d.id_cotizacion = c.id_cotizacion
-    WHERE d.id_cotizacion = ? AND c.id_usuario = ?
+    WHERE d.id_cotizacion = ? AND c.id_usuario = ? AND d.estado_detalle != 'Inactivo'
   `;
   conexion.query(sql, [cotId, userId], (err, results) => {
     if (err) {
@@ -257,10 +262,10 @@ app.put('/api/quotes/:id/update', isAuthenticated, async (req, res) => {
       await conn.query('UPDATE DetalleCotizacion SET precio_unitario = 0, subtotal = 0 WHERE id_cotizacion = ?', [cotId]);
     }
     
-    // 3. Procesar eliminaciones
+    // 3. Procesar eliminaciones (marcar como inactivo)
     if (deletes.length > 0) {
       const placeholders = deletes.map(() => '?').join(',');
-      await conn.query(`DELETE FROM DetalleCotizacion WHERE id_detalle IN (${placeholders}) AND id_cotizacion = ?`, [...deletes, cotId]);
+      await conn.query(`UPDATE DetalleCotizacion SET estado_detalle = 'Inactivo' WHERE id_detalle IN (${placeholders}) AND id_cotizacion = ?`, [...deletes, cotId]);
     }
 
     // 4. Procesar actualizaciones de cantidad
