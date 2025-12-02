@@ -1462,6 +1462,22 @@ async function openEditQuoteModal(id) {
         <td>${d.cantidad}</td>
         <td>
           <input type="number" step="0.01" class="input-precio"
+            oninput="
+              if (this.value.includes('.')) {
+                const parts = this.value.split('.');
+                if (parts[0].length > 12) {
+                  parts[0] = parts[0].slice(0, 12);
+                }
+                if (parts[1] && parts[1].length > 2) {
+                  parts[1] = parts[1].slice(0, 2);
+                }
+                this.value = parts.join('.');
+              } else {
+                if (this.value.length > 12) {
+                  this.value = this.value.slice(0, 12);
+                }
+              }
+            "
             value="${d.precio_unitario == null ? '' : Number(d.precio_unitario).toFixed(2)}"
             style="width:120px;padding:6px;border:1px solid #ccc;border-radius:6px;" />
         </td>
