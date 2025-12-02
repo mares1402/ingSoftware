@@ -1356,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <td>${c.id_cotizacion}</td>
               <td>${c.correo_usuario}</td>
               <td>${new Date(c.fecha_cotizacion).toLocaleString()}</td>
-              <td>${c.estado_cotizacion}</td>
+              <td><span class="status-badge status-${c.estado_cotizacion.toLowerCase().replace(/\s+/g, '-')}">${c.estado_cotizacion}</span></td>
               <td>$${c.total == null ? '—' : Number(c.total).toFixed(2)}</td>
               <td>
                 <button class="btn-edit-quote" data-id="${c.id_cotizacion}"><i class="fa-solid fa-pen"></i></button>
@@ -1467,16 +1467,16 @@ async function openEditQuoteModal(id) {
             oninput="
               if (this.value.includes('.')) {
                 const parts = this.value.split('.');
-                if (parts[0].length > 12) {
-                  parts[0] = parts[0].slice(0, 12);
+                if (parts[0].length > 10) {
+                  parts[0] = parts[0].slice(0, 10);
                 }
                 if (parts[1] && parts[1].length > 2) {
                   parts[1] = parts[1].slice(0, 2);
                 }
                 this.value = parts.join('.');
               } else {
-                if (this.value.length > 12) {
-                  this.value = this.value.slice(0, 12);
+                if (this.value.length > 10) {
+                  this.value = this.value.slice(0, 10);
                 }
               }
             "
@@ -1672,7 +1672,7 @@ async function openClientQuoteModal(id) {
       tbody.innerHTML = details.map(d => `
         <tr data-id-detalle="${d.id_detalle}">
           <td>${d.nombre_producto}</td>
-          <td><input type="number" class="input-quantity-quote" value="${d.cantidad}" min="1" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 6px;"></td>
+          <td><input type="number" class="input-quantity-quote" value="${d.cantidad}" min="1" max="100" oninput="this.value = this.value.replace(/[^0-9]/g, ''); if (parseInt(this.value, 10) > 100) { this.value = '100'; }" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 6px;"></td>
           <td>$${Number(d.precio_unitario).toFixed(2)}</td>
           <td><button class="btn-delete-item-quote" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
         </tr>

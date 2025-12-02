@@ -631,3 +631,29 @@ input[type="file"]::file-selector-button:hover {
   margin-right: 1rem; /* Añade espacio a la derecha, separándolo del hint */
   white-space: nowrap;
 }
+
+/* === Estilos para Badges de Estado de Cotización === */
+.status-badge {
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+  white-space: nowrap;
+  text-align: center;
+  min-width: 90px;
+}
+
+.status-badge.status-pendiente {
+  background-color: #ffc107; /* Amarillo */
+  color: #333; /* Texto oscuro para mejor contraste */
+}
+
+.status-badge.status-devuelta {
+  background-color: #007bff; /* Azul */
+  color: #fff;
+}
+

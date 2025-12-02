@@ -242,7 +242,7 @@ app.put('/api/quotes/:id/update', isAuthenticated, async (req, res) => {
       return res.status(403).json({ mensaje: 'No tienes permiso para editar esta cotización' });
     }
 
-    const isReturned = quotes[0].estado_cotizacion === 'Devuelta';
+    const isReturned = quotes[0].estado_cotizacion === 'Devuelta' || quotes[0].estado_cotizacion === 'Pendiente';
     const hasChanges = updates.length > 0 || deletes.length > 0;
 
     // Si no hay cambios, no hacer nada.

@@ -270,8 +270,12 @@
 
                                 if (existingProduct) {
                                     // Si el producto ya está en el carrito, incrementa la cantidad
-                                    existingProduct.quantity++;
-                                    showToastNotification('Cantidad actualizada en el carrito.', 'success');
+                                    if (existingProduct.quantity < 100) {
+                                        existingProduct.quantity++;
+                                        showToastNotification('Cantidad actualizada en el carrito.', 'success');
+                                    } else {
+                                        showToastNotification('Cantidad máxima (100) alcanzada para este producto', 'info');
+                                    }
                                 } else {
                                     // Si es un producto nuevo, lo añade con cantidad 1
                                     cart.push({ productId: productId, quantity: 1 });
@@ -295,8 +299,12 @@
                         if (!productInCart) return;
 
                         if (target.matches('.increase-qty')) {
-                            // Aumentar cantidad
-                            productInCart.quantity++;
+                            // Aumentar cantidad, con un límite de 100
+                            if (productInCart.quantity < 100) {
+                                productInCart.quantity++;
+                            } else {
+                                showToastNotification('Cantidad máxima (100) alcanzada para este producto', 'info');
+                            }
                         } else if (target.matches('.decrease-qty')) {
                             // Disminuir cantidad
                             productInCart.quantity--;
