@@ -1364,6 +1364,27 @@ function checkQuoteCompleteness() {
   }
 }
 
+/**
+ * Recalcula el subtotal para todas las filas de la tabla de detalles de cotización del admin.
+ * Esto es útil para actualizar los subtotales al cargar el modal si las cantidades han cambiado.
+ */
+function recalcAllSubtotals() {
+  const rows = document.querySelectorAll('#cotdetalleTable tbody tr');
+  rows.forEach(tr => {
+    const cantidad = Number(tr.cells[1].textContent);
+    const precioInput = tr.querySelector('.input-precio');
+    const tdSubtotal = tr.querySelector('.td-subtotal');
+
+    if (precioInput && tdSubtotal && !isNaN(cantidad)) {
+      const precio = parseFloat(precioInput.value);
+      if (!isNaN(precio)) {
+        const subtotal = cantidad * precio;
+        tdSubtotal.textContent = subtotal.toFixed(2);
+      }
+    }
+  });
+}
+
 // ---- Abrir modal y cargar detalles ----
 async function openEditQuoteModal(id) {
   try {
@@ -1436,6 +1457,10 @@ async function openEditQuoteModal(id) {
       });
     });
 
+    // Recalcular todos los subtotales al cargar, en caso de que las cantidades hayan cambiado.
+    recalcAllSubtotals();
+
+    // Ahora, calcular el total general.
     recalcTotal();
 
     /* ====== GUARDAR ====== */
