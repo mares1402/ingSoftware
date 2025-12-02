@@ -1348,6 +1348,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 }
 
+/**
+ * Verifica si todos los precios en la tabla de detalles de cotización están completos.
+ * Si es así, habilita el botón "Marcar como Devuelta".
+ */
+function checkQuoteCompleteness() {
+  const inputs = document.querySelectorAll('#cotdetalleTable .input-precio');
+  const allPricesSet = Array.from(inputs).every(input => input.value.trim() !== '' && !isNaN(parseFloat(input.value)));
+  
+  const btnMarkReturned = document.getElementById('btn-mark-returned');
+  if (btnMarkReturned) {
+    // Si todos los precios están definidos, muestra el botón. Si no, lo oculta.
+    btnMarkReturned.style.display = allPricesSet ? 'inline-block' : 'none';
+    btnMarkReturned.disabled = !allPricesSet; // También mantenemos la lógica de deshabilitado por seguridad.
+  }
+}
+
 // ---- Abrir modal y cargar detalles ----
 async function openEditQuoteModal(id) {
   try {
@@ -1355,6 +1371,16 @@ async function openEditQuoteModal(id) {
     const modal = document.getElementById('modal-editar-cotizacion');
     if (!modal) throw new Error('Modal no encontrado');
     
+    // --- REINICIO DE ESTADO ---
+    // Asegurarse de que el botón "Devolver" esté desactivado al abrir el modal.
+    const btnMarkReturnedOnOpen = document.getElementById('btn-mark-returned');
+    if (btnMarkReturnedOnOpen) btnMarkReturnedOnOpen.style.display = 'none';
+
+    // Asegurarse de que el botón "Guardar" esté visible al abrir el modal.
+    const btnSaveOnOpen = document.getElementById('btn-save-cot');
+    if (btnSaveOnOpen) btnSaveOnOpen.style.display = 'inline-block';
+
+
     setupModalCloseListeners(modal);
     modal.style.display = 'flex';
     
@@ -1447,8 +1473,13 @@ async function openEditQuoteModal(id) {
           const result = await r.json();
           if (r.ok) {
             mostrarNotificacion(result.mensaje || 'Detalles guardados', 'exito');
-            modal.style.display = 'none';
-            loadCotizaciones();
+            // No cerramos el modal, solo recargamos la tabla principal en segundo plano
+            // y habilitamos el botón de devolver si todo está completo.
+            loadCotizaciones(); 
+            // Ocultar el botón de guardar después de un guardado exitoso.
+            btnSave.style.display = 'none';
+            // Habilitar el botón después de un guardado exitoso
+            checkQuoteCompleteness();
           } else {
             mostrarNotificacion(result.mensaje || 'Error al guardar', 'error');
           }
