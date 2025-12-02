@@ -378,6 +378,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           const fecha = new Date(q.fecha_cotizacion).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
           const estadoClass = (q.estado_cotizacion || 'pendiente').toLowerCase().replace(/\s+/g, '-');
           const totalFormateado = q.total != null ? `$${Number(q.total).toFixed(2)}` : '—';
+          // El botón de descarga solo aparece si el estado es 'Devuelta'
+          const botonDescarga = q.estado_cotizacion === 'Devuelta'
+            ? `<button class="btn-download-pdf" data-id="${q.id_cotizacion}" title="Descargar PDF"><i class="fa-solid fa-file-pdf"></i></button>`
+            : '';
 
           return `
             <tr>
@@ -387,7 +391,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <td>${totalFormateado}</td>
               <td>
                 <button class="btn-edit-quote" data-id="${q.id_cotizacion}" title="Ver Detalles"><i class="fa-solid fa-pen"></i></button>
-                <button class="btn-download-pdf" data-id="${q.id_cotizacion}" title="Descargar PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                ${botonDescarga}
               </td>
             </tr>
           `;
@@ -1544,16 +1548,20 @@ async function openClientQuoteModal(id) {
 
     // Obtener detalles
     const res = await fetch(`/api/quotes/${id}`, { credentials: 'same-origin' });
-    if (!res.ok) throw new Error('No se pudieron obtener los detalles de la cotización.');
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.mensaje || 'No se pudieron obtener los detalles de la cotización.');
+    }
     const details = await res.json();
+    console.log('Detalles obtenidos:', details);
 
     if (!details || details.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Esta cotización no tiene productos.</td></tr>';
     } else {
       tbody.innerHTML = details.map(d => `
-        <tr data-id-detalle="${d.id_detalle_cotizacion}">
+        <tr data-id-detalle="${d.id_detalle}">
           <td>${d.nombre_producto}</td>
-          <td><input type="number" class="input-quantity-quote" value="${d.cantidad}" min="1" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 6px;"></td>
+          <td><input type="number" class="input-quantity-quote" value="${d.cantidad}" min="1" oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 70px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 6px;"></td>
           <td>$${Number(d.precio_unitario).toFixed(2)}</td>
           <td><button class="btn-delete-item-quote" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
         </tr>
@@ -1596,7 +1604,10 @@ async function openClientQuoteModal(id) {
         
         mostrarNotificacion('Cambios guardados.', 'exito');
         modal.style.display = 'none';
-        loadClientQuotes();
+        // Recargar el panel de cotizaciones para reflejar todos los cambios,
+        // incluyendo el estado y el total actualizado desde el servidor.
+        const link = document.querySelector('a[data-section="client-quotes.html"]');
+        if (link) showSection('client-quotes.html', link);
       } catch (err) {
         mostrarNotificacion(err.message, 'error');
       }
