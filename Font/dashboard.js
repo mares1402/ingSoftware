@@ -406,7 +406,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         tbody.onclick = (e) => {
           const editBtn = e.target.closest('.btn-edit-quote');
           if (editBtn) openClientQuoteModal(editBtn.dataset.id);
-          // Aquí se puede añadir la lógica para el botón de descarga en el futuro
+          
+          const downloadBtn = e.target.closest('.btn-download-pdf');
+          if (downloadBtn) generateQuotePDF(downloadBtn.dataset.id);
         };
 
         const searchInput = document.querySelector('.panel-search');
@@ -1727,6 +1729,84 @@ async function openClientQuoteModal(id) {
   }
 }
 
+/**
+ * Genera un PDF para una cotización de cliente.
+ * @param {string} quoteId El ID de la cotización.
+ */
+async function generateQuotePDF(quoteId) {
+  try {
+    // Obtener los datos del usuario y de la cotización
+    const [quoteDetailsRes, userRes] = await Promise.all([
+      fetch(`/api/quotes/${quoteId}`, { credentials: 'same-origin' }),
+      fetch('/me', { credentials: 'same-origin' })
+    ]);
+
+    if (!quoteDetailsRes.ok) throw new Error('No se pudieron obtener los detalles de la cotización.');
+    if (!userRes.ok) throw new Error('No se pudo obtener la información del cliente.');
+
+    const details = await quoteDetailsRes.json();
+    const { user } = await userRes.json();
+
+    if (!details || details.length === 0) {
+      mostrarNotificacion('La cotización está vacía, no se puede generar el PDF.', 'error');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // --- Cargar y añadir el logo ---
+    const logoImg = new Image();
+    logoImg.src = '/Font/imgs/mount logo.png';
+    await new Promise(resolve => {
+      logoImg.onload = resolve;
+    });
+    doc.addImage(logoImg, 'PNG', 15, 15, 40, 40);
+
+    // --- Título ---
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('COTIZACIÓN', 200, 35, { align: 'right' });
+
+    // --- Información de la cotización y cliente ---
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const quoteInfo = details[0];
+    const fecha = new Date(quoteInfo.fecha_cotizacion).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+    doc.text(`No. Cotización: #${String(quoteId).padStart(6, '0')}`, 200, 45, { align: 'right' });
+    doc.text(`Fecha: ${fecha}`, 200, 50, { align: 'right' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Cliente:', 15, 70);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${user.nombre} ${user.paterno} ${user.materno}`, 15, 75);
+    doc.text(user.correo, 15, 80);
+
+    // --- Tabla de productos ---
+    const tableBody = details.map(d => [
+      d.nombre_producto,
+      d.cantidad,
+      `$${Number(d.precio_unitario).toFixed(2)}`,
+      `$${(d.cantidad * d.precio_unitario).toFixed(2)}`
+    ]);
+
+    const total = details.reduce((sum, d) => sum + (d.cantidad * d.precio_unitario), 0);
+
+    doc.autoTable({
+      startY: 90,
+      head: [['Producto', 'Cantidad', 'Precio Unitario', 'Subtotal']],
+      body: tableBody,
+      foot: [['', '', 'Total:', `$${total.toFixed(2)}`]],
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185] }
+    });
+
+    doc.save(`Cotizacion-${String(quoteId).padStart(6, '0')}.pdf`);
+  } catch (err) {
+    mostrarNotificacion(`Error al generar PDF: ${err.message}`, 'error');
+    console.error(err);
+  }
+}
 
     // --- Delegación de eventos para botones dinámicos ---
     // Esto asegura que los botones funcionen incluso si se recargan con el contenido.
