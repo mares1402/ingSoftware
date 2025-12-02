@@ -359,9 +359,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Cargar cotizaciones del cliente ---
-    async function loadClientQuotes() {
+    async function loadClientQuotes(searchTerm = '') {
       try {
-        const res = await fetch('/api/quotes', { credentials: 'same-origin' });
+        const url = new URL('/api/quotes', window.location.origin);
+        if (searchTerm) {
+          url.searchParams.append('search', searchTerm);
+        }
+
+        const res = await fetch(url, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('No se pudieron obtener tus cotizaciones');
         const quotes = await res.json();
 
@@ -369,7 +374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!tbody) return;
 
         if (quotes.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">Aún no has generado ninguna cotización.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No se encontraron cotizaciones.</td></tr>';
           return;
         }
 
@@ -403,6 +408,18 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (editBtn) openClientQuoteModal(editBtn.dataset.id);
           // Aquí se puede añadir la lógica para el botón de descarga en el futuro
         };
+
+        const searchInput = document.querySelector('.panel-search');
+        if (searchInput) {
+          let debounceTimeout;
+          searchInput.oninput = () => {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+              loadClientQuotes(searchInput.value);
+            }, 300);
+          };
+        }
+
       } catch (err) {
         mostrarNotificacion('Error cargando cotizaciones: ' + err.message, 'error');
       }
@@ -1313,40 +1330,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  async function loadCotizaciones() {
-  try {
-    const res = await fetch('/api/admin/cotizaciones', { credentials: 'same-origin' });
-    if (!res.ok) throw new Error('No se pudieron obtener las cotizaciones');
-    const cotizaciones = await res.json();
+  async function loadCotizaciones(searchTerm = '') {
+      try {
+        const url = new URL('/api/admin/cotizaciones', window.location.origin);
+        if (searchTerm) {
+          url.searchParams.append('search', searchTerm);
+        }
+        const res = await fetch(url, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('No se pudieron obtener las cotizaciones');
+        const cotizaciones = await res.json();
 
-    const tbody = document.querySelector('#quotesTable tbody');
-    if (!tbody) return;
+        const tbody = document.querySelector('#quotesTable tbody');
+        if (!tbody) return;
 
-    tbody.innerHTML = cotizaciones.map(c => {
-      return `
-        <tr>
-          <td>${c.id_cotizacion}</td>
-          <td>${c.correo_usuario}</td>
-          <td>${new Date(c.fecha_cotizacion).toLocaleString()}</td>
-          <td>${c.estado_cotizacion}</td>
-          <td>$${c.total == null ? '—' : Number(c.total).toFixed(2)}</td>
-          <td>
-            <button class="btn-edit-quote" data-id="${c.id_cotizacion}"><i class="fa-solid fa-pen"></i></button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+        if (cotizaciones.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No se encontraron cotizaciones.</td></tr>';
+            return;
+        }
 
-    tbody.onclick = (e) => {
-      const btn = e.target.closest('.btn-edit-quote');
-      if (btn) openEditQuoteModal(btn.dataset.id);
-    };
+        tbody.innerHTML = cotizaciones.map(c => {
+          return `
+            <tr>
+              <td>${c.id_cotizacion}</td>
+              <td>${c.correo_usuario}</td>
+              <td>${new Date(c.fecha_cotizacion).toLocaleString()}</td>
+              <td>${c.estado_cotizacion}</td>
+              <td>$${c.total == null ? '—' : Number(c.total).toFixed(2)}</td>
+              <td>
+                <button class="btn-edit-quote" data-id="${c.id_cotizacion}"><i class="fa-solid fa-pen"></i></button>
+              </td>
+            </tr>
+          `;
+        }).join('');
 
-  } catch (err) {
-    console.error(err);
-    mostrarNotificacion('Error al cargar cotizaciones: ' + err.message, 'error');
-  }
-}
+        tbody.onclick = (e) => {
+          const btn = e.target.closest('.btn-edit-quote');
+          if (btn) openEditQuoteModal(btn.dataset.id);
+        };
+
+        const searchInput = document.querySelector('.panel-search');
+        if (searchInput) {
+          let debounceTimeout;
+          searchInput.oninput = () => {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+              loadCotizaciones(searchInput.value);
+            }, 300);
+          };
+        }
+
+      } catch (err) {
+        console.error(err);
+        mostrarNotificacion('Error al cargar cotizaciones: ' + err.message, 'error');
+      }
+    }
 
 /**
  * Verifica si todos los precios en la tabla de detalles de cotización están completos.

@@ -140,7 +140,9 @@ app.get('/api/marcas', (req, res) => {
 // Obtener todas las cotizaciones del usuario logueado
 app.get('/api/quotes', isAuthenticated, (req, res) => {
   const userId = req.session.user.id_usuario;
-  const sql = `
+  const { search } = req.query;
+
+  let sql = `
     SELECT 
       id_cotizacion, 
       fecha_cotizacion, 
@@ -148,10 +150,17 @@ app.get('/api/quotes', isAuthenticated, (req, res) => {
       total 
     FROM Cotizaciones 
     WHERE id_usuario = ? 
-    ORDER BY fecha_cotizacion DESC
   `;
+  const params = [userId];
 
-  conexion.query(sql, [userId], (err, results) => {
+  if (search) {
+    sql += ` AND id_cotizacion LIKE ?`;
+    params.push(`%${search}%`);
+  }
+
+  sql += ` ORDER BY fecha_cotizacion DESC`;
+
+  conexion.query(sql, params, (err, results) => {
     if (err) {
       console.error('Error al obtener cotizaciones:', err);
       return res.status(500).json({ mensaje: 'Error interno del servidor' });

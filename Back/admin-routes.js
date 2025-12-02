@@ -1005,14 +1005,24 @@ router.delete('/categorias/:id', isAuthenticated, isAdmin, (req, res) => {
 
 // Listar todas las cotizaciones
 router.get('/cotizaciones', isAuthenticated, isAdmin, (req, res) => {
-  const sql = `
+  const { search } = req.query;
+
+  let sql = `
     SELECT c.id_cotizacion, c.id_usuario, c.fecha_cotizacion, c.estado_cotizacion, c.total,
            u.correo AS correo_usuario
     FROM Cotizaciones c
     JOIN Usuario u ON c.id_usuario = u.id_usuario
-    ORDER BY c.fecha_cotizacion DESC
   `;
-  conexion.query(sql, (err, results) => {
+  const params = [];
+
+  if (search) {
+    sql += ` WHERE c.id_cotizacion LIKE ? OR u.correo LIKE ?`;
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  sql += ` ORDER BY c.fecha_cotizacion DESC`;
+
+  conexion.query(sql, params, (err, results) => {
     if (err) return res.status(500).json({ mensaje: 'Error al listar cotizaciones' });
     res.json(results);
   });
@@ -1045,6 +1055,13 @@ router.post('/cotizaciones/:id/detalles/update', isAuthenticated, isAdmin, (req,
     return res.status(400).json({ mensaje: 'No hay detalles para actualizar' });
   }
 
+  // Validación de precios
+  for (const d of detalles) {
+    if (d.precio_unitario === null || d.precio_unitario === '' || d.precio_unitario === undefined) {
+      return res.status(400).json({ mensaje: 'Todos los productos deben tener un precio unitario asignado.' });
+    }
+  }
+
   conexion.getConnection((err, conn) => {
     if (err) return res.status(500).json({ mensaje: 'Error de conexión' });
 
@@ -1052,6 +1069,10 @@ router.post('/cotizaciones/:id/detalles/update', isAuthenticated, isAdmin, (req,
       if (txErr) return res.status(500).json({ mensaje: 'Error iniciando transacción' });
 
       try {
+        // Consultar estado actual
+        const [quoteStatusRows] = await conn.promise().query('SELECT estado_cotizacion FROM Cotizaciones WHERE id_cotizacion = ?', [idCot]);
+        const isReturned = quoteStatusRows.length > 0 && quoteStatusRows[0].estado_cotizacion === 'Devuelta';
+
         for (const d of detalles) {
           const precio = d.precio_unitario == null ? null : Number(d.precio_unitario);
           const subtotal = d.subtotal == null ? null : Number(d.subtotal);
@@ -1067,7 +1088,7 @@ router.post('/cotizaciones/:id/detalles/update', isAuthenticated, isAdmin, (req,
         }
 
         // Calcular total y actualizar la cotización
-        await new Promise((resolve, reject) => {
+        let totalUpdatePromise = new Promise((resolve, reject) => {
           conn.query(
             `UPDATE Cotizaciones
              SET total = (SELECT SUM(subtotal) FROM DetalleCotizacion WHERE id_cotizacion = ?)
@@ -1076,6 +1097,19 @@ router.post('/cotizaciones/:id/detalles/update', isAuthenticated, isAdmin, (req,
             (e) => e ? reject(e) : resolve()
           );
         });
+
+        let statusUpdatePromise = Promise.resolve();
+        if (isReturned) {
+            statusUpdatePromise = new Promise((resolve, reject) => {
+                conn.query(
+                    `UPDATE Cotizaciones SET estado_cotizacion = 'Pendiente' WHERE id_cotizacion = ?`,
+                    [idCot],
+                    (e) => e ? reject(e) : resolve()
+                );
+            });
+        }
+
+        await Promise.all([totalUpdatePromise, statusUpdatePromise]);
 
         conn.commit(() => {
           conn.release();
