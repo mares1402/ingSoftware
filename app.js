@@ -225,79 +225,72 @@ app.get('/api/quotes/:id', isAuthenticated, (req, res) => {
 });
 
 // Actualizar cantidades y eliminar artículos en cotización del cliente
-app.put('/api/quotes/:id/update', isAuthenticated, (req, res) => {
+app.put('/api/quotes/:id/update', isAuthenticated, async (req, res) => {
   const cotId = req.params.id;
   const userId = req.session.user.id_usuario;
   const { updates = [], deletes = [] } = req.body;
 
-  // Verificar que la cotización pertenece al usuario
-  const checkSql = 'SELECT id_cotizacion FROM Cotizaciones WHERE id_cotizacion = ? AND id_usuario = ?';
-  conexion.query(checkSql, [cotId, userId], (err, results) => {
-    if (err) return res.status(500).json({ mensaje: 'Error al verificar cotización', error: err });
-    if (results.length === 0) {
+  let conn;
+  try {
+    conn = await conexion.promise().getConnection();
+
+    // 1. Verificar que la cotización pertenece al usuario y obtener su estado
+    const [quotes] = await conn.query('SELECT estado_cotizacion FROM Cotizaciones WHERE id_cotizacion = ? AND id_usuario = ?', [cotId, userId]);
+
+    if (quotes.length === 0) {
+      // Usar return para asegurar que la ejecución se detiene aquí
       return res.status(403).json({ mensaje: 'No tienes permiso para editar esta cotización' });
     }
 
-    // Eliminar detalles
+    const isReturned = quotes[0].estado_cotizacion === 'Devuelta';
+    const hasChanges = updates.length > 0 || deletes.length > 0;
+
+    // Si no hay cambios, no hacer nada.
+    if (!hasChanges) {
+      return res.json({ mensaje: 'No se realizaron cambios.' });
+    }
+    
+    await conn.beginTransaction();
+
+    // 2. Si la cotización fue devuelta y hay cambios, reiniciar precios y subtotales de los detalles.
+    if (isReturned) {
+      await conn.query('UPDATE DetalleCotizacion SET precio_unitario = 0, subtotal = 0 WHERE id_cotizacion = ?', [cotId]);
+    }
+    
+    // 3. Procesar eliminaciones
     if (deletes.length > 0) {
       const placeholders = deletes.map(() => '?').join(',');
-      conexion.query(
-        `DELETE FROM DetalleCotizacion WHERE id_detalle IN (${placeholders})`,
-        deletes,
-        (err) => {
-          if (err) {
-            console.error('Error al eliminar:', err);
-            return res.status(500).json({ mensaje: 'Error al eliminar artículos' });
-          }
-        }
-      );
+      await conn.query(`DELETE FROM DetalleCotizacion WHERE id_detalle IN (${placeholders}) AND id_cotizacion = ?`, [...deletes, cotId]);
     }
 
-    // Variable para controlar la respuesta
-    let responseSent = false;
-
-    const finishUpdate = () => {
-      if (responseSent) return;
-      // Una vez que los detalles se actualizan/eliminan, cambiamos el estado de la cotización a 'Pendiente'
-      const updateStatusSql = "UPDATE Cotizaciones SET estado_cotizacion = 'Pendiente' WHERE id_cotizacion = ?";
-      conexion.query(updateStatusSql, [cotId], (statusErr) => {
-        if (statusErr) {
-          console.error('Error al actualizar estado de cotización:', statusErr);
-          if (!responseSent) res.status(500).json({ mensaje: 'Error al actualizar el estado de la cotización' });
-          responseSent = true;
-          return;
-        }
-        if (!responseSent) res.json({ mensaje: 'Cotización actualizada correctamente' });
-        responseSent = true;
-      });
-    };
-
-    // Actualizar cantidades
+    // 4. Procesar actualizaciones de cantidad
     if (updates.length > 0) {
-      let completed = 0;
-      updates.forEach(update => {
-        conexion.query(
-          'UPDATE DetalleCotizacion SET cantidad = ? WHERE id_detalle = ?',
-          [update.cantidad, update.id],
-          (err) => {
-            if (err && !responseSent) {
-              console.error('Error al actualizar:', err);
-              res.status(500).json({ mensaje: 'Error al actualizar cantidades' });
-              responseSent = true;
-              return;
-            }
-            completed++;
-            if (completed === updates.length) {
-              finishUpdate();
-            }
-          }
-        );
-      });
-    } else if (deletes.length > 0) {
-      // Si solo hubo eliminaciones y no actualizaciones
-      finishUpdate();
+      for (const update of updates) {
+        await conn.query('UPDATE DetalleCotizacion SET cantidad = ? WHERE id_detalle = ? AND id_cotizacion = ?', [update.cantidad, update.id, cotId]);
+      }
     }
-  });
+    
+    // 5. Al final, recalcular el total y actualizar el estado de la cotización principal.
+    const finalUpdateSql = `
+      UPDATE Cotizaciones 
+      SET 
+        estado_cotizacion = 'Pendiente',
+        total = (SELECT SUM(cantidad * COALESCE(precio_unitario, 0)) FROM DetalleCotizacion WHERE id_cotizacion = ?)
+      WHERE id_cotizacion = ?
+    `;
+    await conn.query(finalUpdateSql, [cotId, cotId]);
+    
+    await conn.commit();
+    
+    res.json({ mensaje: 'Cotización actualizada correctamente' });
+
+  } catch (error) {
+    if (conn) await conn.rollback();
+    console.error('Error al actualizar cotización del cliente:', error);
+    res.status(500).json({ mensaje: 'Error en el servidor al actualizar la cotización.' });
+  } finally {
+    if (conn) conn.release();
+  }
 });
 
 // Servir dashboard protegido
