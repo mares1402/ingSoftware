@@ -2,10 +2,10 @@ const express = require('express');
 const path = require('path');
 const session = require('express-session');
 const app = express();
-const conexion = require('./Back/conexion');
-const authRoutes = require('./Back/aut-controller');
+const conexion = require('./ingSoftware/Back/conexion');
+const authRoutes = require('./ingSoftware/Back/aut-controller');
 const fs = require('fs'); 
-const adminRoutes = require('./Back/admin-routes');
+const adminRoutes = require('./ingSoftware/Back/admin-routes');
 const multer = require('multer'); // Añadimos multer
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
